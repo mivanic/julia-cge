@@ -1,0 +1,4294 @@
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 19:35:25 Page 1
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+C o m p i l a t i o n
+
+
+   1  set
+   2           reg /reg1*reg10/
+   3           com /com1*com6/
+   4           comm(com) /com2*com6/
+   5           fac /fac1*fac5/
+   6           facc(fac) /fac2*fac5/
+   7  ;
+   8   
+   9  *set smallreg(reg)/usa,canada/;
+  10  alias (smallreg,reg);
+  11   
+  12  alias(com,com2);
+  13   
+  14  positive variables
+  15           p(com)
+  16           qp(com,reg)
+  17           qs(com,reg)
+  18           pe(fac,reg)
+  19           qe(fac,com,reg)
+  20           y(reg)
+  21           qet(fac,reg)
+  22           pet
+  23           c(com,reg)
+  24  ;
+  25   
+  26  variable dum;
+  27   
+  28   
+  29  parameters
+  30           gamma(reg,com)
+  31           alpha(reg,com)
+  32           alpha2(reg,fac)
+  33  ;
+  34   
+  35  loop(reg,
+  36           alpha(reg,"com1")= ord(reg)/card(reg) * 0.6
+  37  loop(comm,
+  38           alpha(reg,comm) = (1-alpha(reg,"com1"))/(card(com)-1)
+  39  ););
+  40   
+  41  loop(reg,
+  42           alpha2(reg,"fac1")= ord(reg)/card(reg) * 0.4
+  43  loop(facc,
+  44           alpha2(reg,facc) = (1-alpha2(reg,"fac1"))/(card(com)-1)
+  45  ););
+  46   
+  47  loop(reg,
+  48  loop(com,
+  49           gamma(reg,com) = ord(reg)/card(reg)*ord(com)/card(com) * 0.15
+  50  ););
+  51   
+      table gamma(reg,com)
+                rice wheat corn
+      usa       0.4  0.2   0.1
+      canada    0.3  0.2   0.1
+      australia 0.1  0.2   0.3
+      ;
+       
+      table alpha(reg,com)
+                rice wheat corn
+      usa       0.2  0.5   0.3
+      canada    0.4  0.5   0.1
+      australia 0.4  0.5   0.1
+      ;
+       
+      table alpha2(reg,fac)
+                labor capital
+      usa       0.4   0.6
+      canada    0.5   0.5
+      australia 0.7   0.3
+      ;
+  74   
+  75  parameters
+  76           gamma2 /1/
+  77           sigma /3/
+  78  ;
+  79   
+  80   
+  81  equations
+  82           eq_demand(com,reg)
+  83           eq_market_clear(com)
+  84           eq_factor_demand(com,reg,fac)
+  85           eq_income(reg)
+  86           eq_factor_clear(fac,reg)
+  87           eq_zero_profits(com,reg)
+  88           eq_index
+  89           eq_c(com,reg)
+  90           eq_dum
+  91  ;
+  92   
+  93  eq_c(com,reg)$(not(ord(com) eq 1 and ord(reg) eq 1))..
+  94           c(com,reg) =e=  1/gamma2 * sum(fac,alpha2(reg,fac) ** (sigma) * (
+      pe(fac,reg) ** (1-sigma))) ** (1/(1-sigma));
+  95   
+  96  eq_demand(com,reg)..
+  97           qp(com,reg) =e= gamma(reg,com) + (y(reg) - sum(com2, gamma(reg,co
+      m2)*p(com2))) * alpha(reg,com)/p(com);
+  98   
+  99  eq_market_clear(com)..
+ 100           sum(reg, qp(com,reg)) =e= sum(reg, qs(com,reg));
+ 101   
+ 102  eq_factor_demand(com,reg,fac)..
+ 103           qe(fac,com,reg) =e= qs(com,reg) / gamma2 * (alpha2(reg,fac)*gamma
+      2 * c(com,reg)/pe(fac,reg)) ** sigma;
+ 104   
+ 105  eq_income(smallreg)..
+ 106           sum(fac, qet(fac,smallreg) * pe(fac,smallreg)) =e= y(smallreg);
+ 107   
+ 108  eq_factor_clear(fac,reg)..
+ 109           sum(com, qe(fac,com,reg))=e=qet(fac,reg);
+ 110   
+ 111  eq_zero_profits(com,reg)..
+ 112           sum(fac, qe(fac,com,reg)*pe(fac,reg)) =e= qs(com,reg)* p(com);
+ 113   
+ 114  eq_index..
+ 115           sum(fac,sum(reg, qet[fac,reg] * pe[fac,reg])) =e= pet;
+ 116   
+ 117  eq_dum..
+ 118           dum =g= 0;
+ 119   
+ 120           p.lo(com)=0.01;
+ 121           qp.lo(com,reg)=0.01;
+ 122           qs.lo(com,reg)=0.01;
+ 123           pe.lo(fac,reg)=0.01;
+ 124           qe.lo(fac,com,reg)=0.01;
+ 125           y.lo(reg)=0.01;
+ 126           qet.lo(fac,reg)=0.01;
+ 127           pet.lo=0.01;
+ 128           c.lo(com,reg)=0.01;
+ 129   
+ 130  loop(fac,
+ 131  loop(reg,
+ 132                             qet.fx[fac,reg] =  ord(fac)/2+ ord(reg);
+ 133  );
+ 134  ) ;
+      qet.fx["labor","usa"] =  4;
+      qet.fx["capital","usa"] = 2;
+      qet.fx["labor","canada"] = 1;
+      qet.fx["capital","canada"]=3;
+      qet.fx["labor","australia"]=1;
+      qet.fx["capital","australia"] = 1;
+      pet.fx = 1;
+ 144   
+ 145  model m/
+ 146           eq_demand
+ 147           eq_market_clear
+ 148           eq_factor_demand
+ 149           eq_income
+ 150           eq_factor_clear
+ 151           eq_zero_profits
+ 152  *         eq_index
+ 153           eq_c
+ 154           eq_dum
+ 155  /;
+ 156   
+ 157  option CNS = path;
+ 158   
+      qs.fx["rice","usa"]       = 0.949710797;
+      qs.fx["wheat","usa"]       = 1.468796831;
+      qs.fx["corn","usa"]        =0.843581837  ;
+      qs.fx["rice","canada"]      =  0.788210071;
+      qs.fx["wheat","canada"]      =  0.870992865;
+      qs.fx["corn","canada"]       = 0.206822467  ;
+      qs.fx["rice","australia"]     =   1.076895486;
+      qs.fx["wheat","australia"]=        1.44746222;
+      qs.fx["corn","australia"]=        0.579950684 ;
+       
+      pe.fx["labor","usa"]        =7.226933536;
+      pe.fx["capital","usa"]        =6.81361828;
+      pe.fx["labor","canada"]        =15.12600106;
+      pe.fx["capital","canada"]        =8.733000785;
+      pe.fx["labor","australia"]        =10.84200776 ;
+      pe.fx["capital","australia"]        =25.29801812;
+ 177   
+ 178  p.l(com)=200;
+ 179  pe.l(fac,reg)=210;
+ 180  qe.l(fac,com,reg)=200;
+ 181  c.l(com,reg)=200;
+ 182  y.l(reg)=200;
+ 183  qs.l(com,reg)=210;
+ 184  qp.l(com,reg)=220;
+ 185   
+ 186  p.fx("com1")=10;
+ 187   
+ 188   
+ 189  solve m using NLP minimizing dum;
+ 190   
+ 191  model m2/
+ 192           eq_c
+ 193           eq_demand
+ 194           eq_market_clear
+ 195           eq_factor_demand
+ 196           eq_income
+ 197           eq_factor_clear
+ 198           eq_zero_profits
+ 199  *         eq_index
+ 200  *         eq_dum
+ 201  /;
+ 202   
+ 203  solve m2 using CNS;
+ 204   
+      qet.fx["capital","australia"] =  2;
+      solve m using NLP minimizing dum;
+      solve m2 using CNS;
+      *qet.fx["labor","usa"] =  4;
+      *solve m2 using CNS;
+       
+        parameter c2(com,reg);
+      c2(com,reg) = 1/gamma2 * sum(fac,alpha2(reg,fac) ** (sigma) * (pe.l(fac,re
+      g) ** (1-sigma))) ** (1/(1-sigma));
+      display qe.l, y.l, qp.l, c.l, c2, pe.l, alpha2, gamma2,p.l, qs.l, qet.l;
+       
+       
+ 218   
+ 219  display alpha, gamma, alpha2, qp.l;
+
+
+COMPILATION TIME     =        0.000 SECONDS      3 MB  33.2.0 r4f23b21 WEX-WEI
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 19:35:25 Page 2
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE m Using NLP From line 189
+
+
+---- eq_demand  =E=  
+
+eq_demand(com1,reg1)..  (0.114)*p(com1) + (3E-5)*p(com2) + (4.5E-5)*p(com3)
+     
+      + (6E-5)*p(com4) + (7.5E-5)*p(com5) + (9E-5)*p(com6) + qp(com1,reg1)
+     
+      - (0.006)*y(reg1) =E= 0.0025 ; (LHS = 218.86015, INFES = 218.85765 ****)
+     
+eq_demand(com1,reg2)..  (0.216)*p(com1) + (0.00012)*p(com2) + (0.00018)*p(com3)
+     
+      + (0.00024)*p(com4) + (0.0003)*p(com5) + (0.00036)*p(com6) + qp(com1,reg2)
+     
+      - (0.012)*y(reg2) =E= 0.005 ; (LHS = 217.8406, INFES = 217.8356 ****)
+     
+eq_demand(com1,reg3)..  (0.306)*p(com1) + (0.00027)*p(com2) + (0.000405)*p(com3)
+     
+      + (0.00054)*p(com4) + (0.000675)*p(com5) + (0.00081)*p(com6)
+     
+      + qp(com1,reg3) - (0.018)*y(reg3) =E= 0.0075 ;
+     
+      (LHS = 216.94135, INFES = 216.93385 ****)
+     
+REMAINING 57 ENTRIES SKIPPED
+
+
+---- eq_market_clear  =E=  
+
+eq_market_clear(com1)..  qp(com1,reg1) + qp(com1,reg2) + qp(com1,reg3)
+     
+      + qp(com1,reg4) + qp(com1,reg5) + qp(com1,reg6) + qp(com1,reg7)
+     
+      + qp(com1,reg8) + qp(com1,reg9) + qp(com1,reg10) - qs(com1,reg1)
+     
+      - qs(com1,reg2) - qs(com1,reg3) - qs(com1,reg4) - qs(com1,reg5)
+     
+      - qs(com1,reg6) - qs(com1,reg7) - qs(com1,reg8) - qs(com1,reg9)
+     
+      - qs(com1,reg10) =E= 0 ; (LHS = 100, INFES = 100 ****)
+     
+eq_market_clear(com2)..  qp(com2,reg1) + qp(com2,reg2) + qp(com2,reg3)
+     
+      + qp(com2,reg4) + qp(com2,reg5) + qp(com2,reg6) + qp(com2,reg7)
+     
+      + qp(com2,reg8) + qp(com2,reg9) + qp(com2,reg10) - qs(com2,reg1)
+     
+      - qs(com2,reg2) - qs(com2,reg3) - qs(com2,reg4) - qs(com2,reg5)
+     
+      - qs(com2,reg6) - qs(com2,reg7) - qs(com2,reg8) - qs(com2,reg9)
+     
+      - qs(com2,reg10) =E= 0 ; (LHS = 100, INFES = 100 ****)
+     
+eq_market_clear(com3)..  qp(com3,reg1) + qp(com3,reg2) + qp(com3,reg3)
+     
+      + qp(com3,reg4) + qp(com3,reg5) + qp(com3,reg6) + qp(com3,reg7)
+     
+      + qp(com3,reg8) + qp(com3,reg9) + qp(com3,reg10) - qs(com3,reg1)
+     
+      - qs(com3,reg2) - qs(com3,reg3) - qs(com3,reg4) - qs(com3,reg5)
+     
+      - qs(com3,reg6) - qs(com3,reg7) - qs(com3,reg8) - qs(com3,reg9)
+     
+      - qs(com3,reg10) =E= 0 ; (LHS = 100, INFES = 100 ****)
+     
+REMAINING 3 ENTRIES SKIPPED
+
+
+---- eq_factor_demand  =E=  
+
+eq_factor_demand(com1,reg1,fac1)..  - (5.52856063060145E-5)*qs(com1,reg1)
+     
+      + (0.000165856818918043)*pe(fac1,reg1) + qe(fac1,com1,reg1)
+     
+      - (0.000174149659863946)*c(com1,reg1) =E= 0 ;
+     
+      (LHS = 199.988390022676, INFES = 199.988390022676 ****)
+     
+eq_factor_demand(com1,reg1,fac2)..  - (0.00611414577259475)*qs(com1,reg1)
+     
+      + (0.0183424373177843)*pe(fac2,reg1) + qe(fac2,com1,reg1)
+     
+      - (0.0192595591836735)*c(com1,reg1) =E= 0 ;
+     
+      (LHS = 198.716029387755, INFES = 198.716029387755 ****)
+     
+eq_factor_demand(com1,reg1,fac3)..  - (0.00611414577259475)*qs(com1,reg1)
+     
+      + (0.0183424373177843)*pe(fac3,reg1) + qe(fac3,com1,reg1)
+     
+      - (0.0192595591836735)*c(com1,reg1) =E= 0 ;
+     
+      (LHS = 198.716029387755, INFES = 198.716029387755 ****)
+     
+REMAINING 297 ENTRIES SKIPPED
+
+
+---- eq_income  =E=  
+
+eq_income(reg1)..  (1.5)*pe(fac1,reg1) + (2)*pe(fac2,reg1) + (2.5)*pe(fac3,reg1)
+     
+      + (3)*pe(fac4,reg1) + (3.5)*pe(fac5,reg1) - y(reg1) + (210)*qet(fac1,reg1)
+     
+      + (210)*qet(fac2,reg1) + (210)*qet(fac3,reg1) + (210)*qet(fac4,reg1)
+     
+      + (210)*qet(fac5,reg1) =E= 0 ; (LHS = 2425, INFES = 2425 ****)
+     
+eq_income(reg2)..  (2.5)*pe(fac1,reg2) + (3)*pe(fac2,reg2) + (3.5)*pe(fac3,reg2)
+     
+      + (4)*pe(fac4,reg2) + (4.5)*pe(fac5,reg2) - y(reg2) + (210)*qet(fac1,reg2)
+     
+      + (210)*qet(fac2,reg2) + (210)*qet(fac3,reg2) + (210)*qet(fac4,reg2)
+     
+      + (210)*qet(fac5,reg2) =E= 0 ; (LHS = 3475, INFES = 3475 ****)
+     
+eq_income(reg3)..  (3.5)*pe(fac1,reg3) + (4)*pe(fac2,reg3) + (4.5)*pe(fac3,reg3)
+     
+      + (5)*pe(fac4,reg3) + (5.5)*pe(fac5,reg3) - y(reg3) + (210)*qet(fac1,reg3)
+     
+      + (210)*qet(fac2,reg3) + (210)*qet(fac3,reg3) + (210)*qet(fac4,reg3)
+     
+      + (210)*qet(fac5,reg3) =E= 0 ; (LHS = 4525, INFES = 4525 ****)
+     
+REMAINING 7 ENTRIES SKIPPED
+
+
+---- eq_factor_clear  =E=  
+
+eq_factor_clear(fac1,reg1)..  qe(fac1,com1,reg1) + qe(fac1,com2,reg1)
+     
+      + qe(fac1,com3,reg1) + qe(fac1,com4,reg1) + qe(fac1,com5,reg1)
+     
+      + qe(fac1,com6,reg1) - qet(fac1,reg1) =E= 0 ;
+     
+      (LHS = 1198.5, INFES = 1198.5 ****)
+     
+eq_factor_clear(fac1,reg2)..  qe(fac1,com1,reg2) + qe(fac1,com2,reg2)
+     
+      + qe(fac1,com3,reg2) + qe(fac1,com4,reg2) + qe(fac1,com5,reg2)
+     
+      + qe(fac1,com6,reg2) - qet(fac1,reg2) =E= 0 ;
+     
+      (LHS = 1197.5, INFES = 1197.5 ****)
+     
+eq_factor_clear(fac1,reg3)..  qe(fac1,com1,reg3) + qe(fac1,com2,reg3)
+     
+      + qe(fac1,com3,reg3) + qe(fac1,com4,reg3) + qe(fac1,com5,reg3)
+     
+      + qe(fac1,com6,reg3) - qet(fac1,reg3) =E= 0 ;
+     
+      (LHS = 1196.5, INFES = 1196.5 ****)
+     
+REMAINING 47 ENTRIES SKIPPED
+
+
+---- eq_zero_profits  =E=  
+
+eq_zero_profits(com1,reg1)..  - (210)*p(com1) - (10)*qs(com1,reg1)
+     
+      + (200)*pe(fac1,reg1) + (200)*pe(fac2,reg1) + (200)*pe(fac3,reg1)
+     
+      + (200)*pe(fac4,reg1) + (200)*pe(fac5,reg1) + (210)*qe(fac1,com1,reg1)
+     
+      + (210)*qe(fac2,com1,reg1) + (210)*qe(fac3,com1,reg1)
+     
+      + (210)*qe(fac4,com1,reg1) + (210)*qe(fac5,com1,reg1) =E= 0 ;
+     
+      (LHS = 207900, INFES = 207900 ****)
+     
+eq_zero_profits(com1,reg2)..  - (210)*p(com1) - (10)*qs(com1,reg2)
+     
+      + (200)*pe(fac1,reg2) + (200)*pe(fac2,reg2) + (200)*pe(fac3,reg2)
+     
+      + (200)*pe(fac4,reg2) + (200)*pe(fac5,reg2) + (210)*qe(fac1,com1,reg2)
+     
+      + (210)*qe(fac2,com1,reg2) + (210)*qe(fac3,com1,reg2)
+     
+      + (210)*qe(fac4,com1,reg2) + (210)*qe(fac5,com1,reg2) =E= 0 ;
+     
+      (LHS = 207900, INFES = 207900 ****)
+     
+eq_zero_profits(com1,reg3)..  - (210)*p(com1) - (10)*qs(com1,reg3)
+     
+      + (200)*pe(fac1,reg3) + (200)*pe(fac2,reg3) + (200)*pe(fac3,reg3)
+     
+      + (200)*pe(fac4,reg3) + (200)*pe(fac5,reg3) + (210)*qe(fac1,com1,reg3)
+     
+      + (210)*qe(fac2,com1,reg3) + (210)*qe(fac3,com1,reg3)
+     
+      + (210)*qe(fac4,com1,reg3) + (210)*qe(fac5,com1,reg3) =E= 0 ;
+     
+      (LHS = 207900, INFES = 207900 ****)
+     
+REMAINING 57 ENTRIES SKIPPED
+
+
+---- eq_c  =E=  
+
+eq_c(com1,reg2)..  - (0.126255414152554)*pe(fac1,reg2)
+     
+      - (1.53614962399413)*pe(fac2,reg2) - (1.53614962399413)*pe(fac3,reg2)
+     
+      - (1.53614962399413)*pe(fac4,reg2) - (1.53614962399413)*pe(fac5,reg2)
+     
+      + c(com1,reg2) =E= 0 ;
+     
+      (LHS = -1116.8793211271, INFES = 1116.8793211271 ****)
+     
+eq_c(com1,reg3)..  - (0.47859654102195)*pe(fac1,reg3)
+     
+      - (1.50995436112644)*pe(fac2,reg3) - (1.50995436112644)*pe(fac3,reg3)
+     
+      - (1.50995436112644)*pe(fac4,reg3) - (1.50995436112644)*pe(fac5,reg3)
+     
+      + c(com1,reg3) =E= 0 ;
+     
+      (LHS = -1168.86693696082, INFES = 1168.86693696082 ****)
+     
+eq_c(com1,reg4)..  - (1.16949826487022)*pe(fac1,reg4)
+     
+      - (1.35384042887039)*pe(fac2,reg4) - (1.35384042887039)*pe(fac3,reg4)
+     
+      - (1.35384042887039)*pe(fac4,reg4) - (1.35384042887039)*pe(fac5,reg4)
+     
+      + c(com1,reg4) =E= 0 ;
+     
+      (LHS = -1182.82059587387, INFES = 1182.82059587387 ****)
+     
+REMAINING 56 ENTRIES SKIPPED
+
+
+---- eq_dum  =G=  
+
+eq_dum..  dum =G= 0 ; (LHS = 0)
+     
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 19:35:25 Page 3
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE m Using NLP From line 189
+
+
+---- p  
+
+p(com1)
+                (.LO, .L, .UP, .M = 10, 10, 10, 0)
+       (0.114)  eq_demand(com1,reg1)
+       (0.216)  eq_demand(com1,reg2)
+       (0.306)  eq_demand(com1,reg3)
+       (0.384)  eq_demand(com1,reg4)
+       (0.45)   eq_demand(com1,reg5)
+       (0.504)  eq_demand(com1,reg6)
+       (0.546)  eq_demand(com1,reg7)
+       (0.576)  eq_demand(com1,reg8)
+       (0.594)  eq_demand(com1,reg9)
+       (0.6)    eq_demand(com1,reg10)
+ (2.3500000E-6) eq_demand(com2,reg1)
+ (4.4000000E-6) eq_demand(com2,reg2)
+ (6.1500000E-6) eq_demand(com2,reg3)
+ (7.6000000E-6) eq_demand(com2,reg4)
+ (8.7500000E-6) eq_demand(com2,reg5)
+ (9.6000000E-6) eq_demand(com2,reg6)
+ (1.0150000E-5) eq_demand(com2,reg7)
+ (1.0400000E-5) eq_demand(com2,reg8)
+ (1.0350000E-5) eq_demand(com2,reg9)
+ (1.0000000E-5) eq_demand(com2,reg10)
+ (2.3500000E-6) eq_demand(com3,reg1)
+ (4.4000000E-6) eq_demand(com3,reg2)
+ (6.1500000E-6) eq_demand(com3,reg3)
+ (7.6000000E-6) eq_demand(com3,reg4)
+ (8.7500000E-6) eq_demand(com3,reg5)
+ (9.6000000E-6) eq_demand(com3,reg6)
+ (1.0150000E-5) eq_demand(com3,reg7)
+ (1.0400000E-5) eq_demand(com3,reg8)
+ (1.0350000E-5) eq_demand(com3,reg9)
+ (1.0000000E-5) eq_demand(com3,reg10)
+ (2.3500000E-6) eq_demand(com4,reg1)
+ (4.4000000E-6) eq_demand(com4,reg2)
+ (6.1500000E-6) eq_demand(com4,reg3)
+ (7.6000000E-6) eq_demand(com4,reg4)
+ (8.7500000E-6) eq_demand(com4,reg5)
+ (9.6000000E-6) eq_demand(com4,reg6)
+ (1.0150000E-5) eq_demand(com4,reg7)
+ (1.0400000E-5) eq_demand(com4,reg8)
+ (1.0350000E-5) eq_demand(com4,reg9)
+ (1.0000000E-5) eq_demand(com4,reg10)
+ (2.3500000E-6) eq_demand(com5,reg1)
+ (4.4000000E-6) eq_demand(com5,reg2)
+ (6.1500000E-6) eq_demand(com5,reg3)
+ (7.6000000E-6) eq_demand(com5,reg4)
+ (8.7500000E-6) eq_demand(com5,reg5)
+ (9.6000000E-6) eq_demand(com5,reg6)
+ (1.0150000E-5) eq_demand(com5,reg7)
+ (1.0400000E-5) eq_demand(com5,reg8)
+ (1.0350000E-5) eq_demand(com5,reg9)
+ (1.0000000E-5) eq_demand(com5,reg10)
+ (2.3500000E-6) eq_demand(com6,reg1)
+ (4.4000000E-6) eq_demand(com6,reg2)
+ (6.1500000E-6) eq_demand(com6,reg3)
+ (7.6000000E-6) eq_demand(com6,reg4)
+ (8.7500000E-6) eq_demand(com6,reg5)
+ (9.6000000E-6) eq_demand(com6,reg6)
+ (1.0150000E-5) eq_demand(com6,reg7)
+ (1.0400000E-5) eq_demand(com6,reg8)
+ (1.0350000E-5) eq_demand(com6,reg9)
+ (1.0000000E-5) eq_demand(com6,reg10)
+    (-210)      eq_zero_profits(com1,reg1)
+    (-210)      eq_zero_profits(com1,reg2)
+    (-210)      eq_zero_profits(com1,reg3)
+    (-210)      eq_zero_profits(com1,reg4)
+    (-210)      eq_zero_profits(com1,reg5)
+    (-210)      eq_zero_profits(com1,reg6)
+    (-210)      eq_zero_profits(com1,reg7)
+    (-210)      eq_zero_profits(com1,reg8)
+    (-210)      eq_zero_profits(com1,reg9)
+    (-210)      eq_zero_profits(com1,reg10)
+
+p(com2)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+ (3.0000000E-5) eq_demand(com1,reg1)
+       (0.0001) eq_demand(com1,reg2)
+       (0.0003) eq_demand(com1,reg3)
+       (0.0005) eq_demand(com1,reg4)
+       (0.0007) eq_demand(com1,reg5)
+       (0.0011) eq_demand(com1,reg6)
+       (0.0015) eq_demand(com1,reg7)
+       (0.0019) eq_demand(com1,reg8)
+       (0.0024) eq_demand(com1,reg9)
+       (0.003)  eq_demand(com1,reg10)
+       (0.0009) eq_demand(com2,reg1)
+       (0.0008) eq_demand(com2,reg2)
+       (0.0007) eq_demand(com2,reg3)
+       (0.0006) eq_demand(com2,reg4)
+       (0.0005) eq_demand(com2,reg5)
+       (0.0005) eq_demand(com2,reg6)
+       (0.0004) eq_demand(com2,reg7)
+       (0.0003) eq_demand(com2,reg8)
+       (0.0003) eq_demand(com2,reg9)
+       (0.0002) eq_demand(com2,reg10)
+ (4.7000000E-6) eq_demand(com3,reg1)
+ (8.8000000E-6) eq_demand(com3,reg2)
+ (1.2300000E-5) eq_demand(com3,reg3)
+ (1.5200000E-5) eq_demand(com3,reg4)
+ (1.7500000E-5) eq_demand(com3,reg5)
+ (1.9200000E-5) eq_demand(com3,reg6)
+ (2.0300000E-5) eq_demand(com3,reg7)
+ (2.0800000E-5) eq_demand(com3,reg8)
+ (2.0700000E-5) eq_demand(com3,reg9)
+ (2.0000000E-5) eq_demand(com3,reg10)
+ (4.7000000E-6) eq_demand(com4,reg1)
+ (8.8000000E-6) eq_demand(com4,reg2)
+ (1.2300000E-5) eq_demand(com4,reg3)
+ (1.5200000E-5) eq_demand(com4,reg4)
+ (1.7500000E-5) eq_demand(com4,reg5)
+ (1.9200000E-5) eq_demand(com4,reg6)
+ (2.0300000E-5) eq_demand(com4,reg7)
+ (2.0800000E-5) eq_demand(com4,reg8)
+ (2.0700000E-5) eq_demand(com4,reg9)
+ (2.0000000E-5) eq_demand(com4,reg10)
+ (4.7000000E-6) eq_demand(com5,reg1)
+ (8.8000000E-6) eq_demand(com5,reg2)
+ (1.2300000E-5) eq_demand(com5,reg3)
+ (1.5200000E-5) eq_demand(com5,reg4)
+ (1.7500000E-5) eq_demand(com5,reg5)
+ (1.9200000E-5) eq_demand(com5,reg6)
+ (2.0300000E-5) eq_demand(com5,reg7)
+ (2.0800000E-5) eq_demand(com5,reg8)
+ (2.0700000E-5) eq_demand(com5,reg9)
+ (2.0000000E-5) eq_demand(com5,reg10)
+ (4.7000000E-6) eq_demand(com6,reg1)
+ (8.8000000E-6) eq_demand(com6,reg2)
+ (1.2300000E-5) eq_demand(com6,reg3)
+ (1.5200000E-5) eq_demand(com6,reg4)
+ (1.7500000E-5) eq_demand(com6,reg5)
+ (1.9200000E-5) eq_demand(com6,reg6)
+ (2.0300000E-5) eq_demand(com6,reg7)
+ (2.0800000E-5) eq_demand(com6,reg8)
+ (2.0700000E-5) eq_demand(com6,reg9)
+ (2.0000000E-5) eq_demand(com6,reg10)
+    (-210)      eq_zero_profits(com2,reg1)
+    (-210)      eq_zero_profits(com2,reg2)
+    (-210)      eq_zero_profits(com2,reg3)
+    (-210)      eq_zero_profits(com2,reg4)
+    (-210)      eq_zero_profits(com2,reg5)
+    (-210)      eq_zero_profits(com2,reg6)
+    (-210)      eq_zero_profits(com2,reg7)
+    (-210)      eq_zero_profits(com2,reg8)
+    (-210)      eq_zero_profits(com2,reg9)
+    (-210)      eq_zero_profits(com2,reg10)
+
+p(com3)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+ (4.5000000E-5) eq_demand(com1,reg1)
+       (0.0002) eq_demand(com1,reg2)
+       (0.0004) eq_demand(com1,reg3)
+       (0.0007) eq_demand(com1,reg4)
+       (0.0011) eq_demand(com1,reg5)
+       (0.0016) eq_demand(com1,reg6)
+       (0.0022) eq_demand(com1,reg7)
+       (0.0029) eq_demand(com1,reg8)
+       (0.0036) eq_demand(com1,reg9)
+       (0.0045) eq_demand(com1,reg10)
+ (7.0500000E-6) eq_demand(com2,reg1)
+ (1.3200000E-5) eq_demand(com2,reg2)
+ (1.8450000E-5) eq_demand(com2,reg3)
+ (2.2800000E-5) eq_demand(com2,reg4)
+ (2.6250000E-5) eq_demand(com2,reg5)
+ (2.8800000E-5) eq_demand(com2,reg6)
+ (3.0450000E-5) eq_demand(com2,reg7)
+ (3.1200000E-5) eq_demand(com2,reg8)
+ (3.1050000E-5) eq_demand(com2,reg9)
+ (3.0000000E-5) eq_demand(com2,reg10)
+       (0.0009) eq_demand(com3,reg1)
+       (0.0008) eq_demand(com3,reg2)
+       (0.0007) eq_demand(com3,reg3)
+       (0.0006) eq_demand(com3,reg4)
+       (0.0006) eq_demand(com3,reg5)
+       (0.0005) eq_demand(com3,reg6)
+       (0.0004) eq_demand(com3,reg7)
+       (0.0003) eq_demand(com3,reg8)
+       (0.0003) eq_demand(com3,reg9)
+       (0.0002) eq_demand(com3,reg10)
+ (7.0500000E-6) eq_demand(com4,reg1)
+ (1.3200000E-5) eq_demand(com4,reg2)
+ (1.8450000E-5) eq_demand(com4,reg3)
+ (2.2800000E-5) eq_demand(com4,reg4)
+ (2.6250000E-5) eq_demand(com4,reg5)
+ (2.8800000E-5) eq_demand(com4,reg6)
+ (3.0450000E-5) eq_demand(com4,reg7)
+ (3.1200000E-5) eq_demand(com4,reg8)
+ (3.1050000E-5) eq_demand(com4,reg9)
+ (3.0000000E-5) eq_demand(com4,reg10)
+ (7.0500000E-6) eq_demand(com5,reg1)
+ (1.3200000E-5) eq_demand(com5,reg2)
+ (1.8450000E-5) eq_demand(com5,reg3)
+ (2.2800000E-5) eq_demand(com5,reg4)
+ (2.6250000E-5) eq_demand(com5,reg5)
+ (2.8800000E-5) eq_demand(com5,reg6)
+ (3.0450000E-5) eq_demand(com5,reg7)
+ (3.1200000E-5) eq_demand(com5,reg8)
+ (3.1050000E-5) eq_demand(com5,reg9)
+ (3.0000000E-5) eq_demand(com5,reg10)
+ (7.0500000E-6) eq_demand(com6,reg1)
+ (1.3200000E-5) eq_demand(com6,reg2)
+ (1.8450000E-5) eq_demand(com6,reg3)
+ (2.2800000E-5) eq_demand(com6,reg4)
+ (2.6250000E-5) eq_demand(com6,reg5)
+ (2.8800000E-5) eq_demand(com6,reg6)
+ (3.0450000E-5) eq_demand(com6,reg7)
+ (3.1200000E-5) eq_demand(com6,reg8)
+ (3.1050000E-5) eq_demand(com6,reg9)
+ (3.0000000E-5) eq_demand(com6,reg10)
+    (-210)      eq_zero_profits(com3,reg1)
+    (-210)      eq_zero_profits(com3,reg2)
+    (-210)      eq_zero_profits(com3,reg3)
+    (-210)      eq_zero_profits(com3,reg4)
+    (-210)      eq_zero_profits(com3,reg5)
+    (-210)      eq_zero_profits(com3,reg6)
+    (-210)      eq_zero_profits(com3,reg7)
+    (-210)      eq_zero_profits(com3,reg8)
+    (-210)      eq_zero_profits(com3,reg9)
+    (-210)      eq_zero_profits(com3,reg10)
+
+REMAINING 3 ENTRIES SKIPPED
+
+---- qp  
+
+qp(com1,reg1)
+                (.LO, .L, .UP, .M = 0.01, 220, +INF, 0)
+        1       eq_demand(com1,reg1)
+        1       eq_market_clear(com1)
+
+qp(com1,reg2)
+                (.LO, .L, .UP, .M = 0.01, 220, +INF, 0)
+        1       eq_demand(com1,reg2)
+        1       eq_market_clear(com1)
+
+qp(com1,reg3)
+                (.LO, .L, .UP, .M = 0.01, 220, +INF, 0)
+        1       eq_demand(com1,reg3)
+        1       eq_market_clear(com1)
+
+REMAINING 57 ENTRIES SKIPPED
+
+---- qs  
+
+qs(com1,reg1)
+                (.LO, .L, .UP, .M = 0.01, 210, +INF, 0)
+       -1       eq_market_clear(com1)
+ (-5.528561E-5) eq_factor_demand(com1,reg1,fac1)
+      (-0.0061) eq_factor_demand(com1,reg1,fac2)
+      (-0.0061) eq_factor_demand(com1,reg1,fac3)
+      (-0.0061) eq_factor_demand(com1,reg1,fac4)
+      (-0.0061) eq_factor_demand(com1,reg1,fac5)
+     (-10)      eq_zero_profits(com1,reg1)
+
+qs(com1,reg2)
+                (.LO, .L, .UP, .M = 0.01, 210, +INF, 0)
+       -1       eq_market_clear(com1)
+      (-0.0004) eq_factor_demand(com1,reg2,fac1)
+      (-0.0054) eq_factor_demand(com1,reg2,fac2)
+      (-0.0054) eq_factor_demand(com1,reg2,fac3)
+      (-0.0054) eq_factor_demand(com1,reg2,fac4)
+      (-0.0054) eq_factor_demand(com1,reg2,fac5)
+     (-10)      eq_zero_profits(com1,reg2)
+
+qs(com1,reg3)
+                (.LO, .L, .UP, .M = 0.01, 210, +INF, 0)
+       -1       eq_market_clear(com1)
+      (-0.0015) eq_factor_demand(com1,reg3,fac1)
+      (-0.0047) eq_factor_demand(com1,reg3,fac2)
+      (-0.0047) eq_factor_demand(com1,reg3,fac3)
+      (-0.0047) eq_factor_demand(com1,reg3,fac4)
+      (-0.0047) eq_factor_demand(com1,reg3,fac5)
+     (-10)      eq_zero_profits(com1,reg3)
+
+REMAINING 57 ENTRIES SKIPPED
+
+---- pe  
+
+pe(fac1,reg1)
+                (.LO, .L, .UP, .M = 0.01, 210, +INF, 0)
+       (0.0002) eq_factor_demand(com1,reg1,fac1)
+       (0.0002) eq_factor_demand(com2,reg1,fac1)
+       (0.0002) eq_factor_demand(com3,reg1,fac1)
+       (0.0002) eq_factor_demand(com4,reg1,fac1)
+       (0.0002) eq_factor_demand(com5,reg1,fac1)
+       (0.0002) eq_factor_demand(com6,reg1,fac1)
+       (1.5)    eq_income(reg1)
+     (200)      eq_zero_profits(com1,reg1)
+     (200)      eq_zero_profits(com2,reg1)
+     (200)      eq_zero_profits(com3,reg1)
+     (200)      eq_zero_profits(com4,reg1)
+     (200)      eq_zero_profits(com5,reg1)
+     (200)      eq_zero_profits(com6,reg1)
+      (-0.0134) eq_c(com2,reg1)
+      (-0.0134) eq_c(com3,reg1)
+      (-0.0134) eq_c(com4,reg1)
+      (-0.0134) eq_c(com5,reg1)
+      (-0.0134) eq_c(com6,reg1)
+
+pe(fac1,reg2)
+                (.LO, .L, .UP, .M = 0.01, 210, +INF, 0)
+       (0.0013) eq_factor_demand(com1,reg2,fac1)
+       (0.0013) eq_factor_demand(com2,reg2,fac1)
+       (0.0013) eq_factor_demand(com3,reg2,fac1)
+       (0.0013) eq_factor_demand(com4,reg2,fac1)
+       (0.0013) eq_factor_demand(com5,reg2,fac1)
+       (0.0013) eq_factor_demand(com6,reg2,fac1)
+       (2.5)    eq_income(reg2)
+     (200)      eq_zero_profits(com1,reg2)
+     (200)      eq_zero_profits(com2,reg2)
+     (200)      eq_zero_profits(com3,reg2)
+     (200)      eq_zero_profits(com4,reg2)
+     (200)      eq_zero_profits(com5,reg2)
+     (200)      eq_zero_profits(com6,reg2)
+      (-0.1263) eq_c(com1,reg2)
+      (-0.1263) eq_c(com2,reg2)
+      (-0.1263) eq_c(com3,reg2)
+      (-0.1263) eq_c(com4,reg2)
+      (-0.1263) eq_c(com5,reg2)
+      (-0.1263) eq_c(com6,reg2)
+
+pe(fac1,reg3)
+                (.LO, .L, .UP, .M = 0.01, 210, +INF, 0)
+       (0.0045) eq_factor_demand(com1,reg3,fac1)
+       (0.0045) eq_factor_demand(com2,reg3,fac1)
+       (0.0045) eq_factor_demand(com3,reg3,fac1)
+       (0.0045) eq_factor_demand(com4,reg3,fac1)
+       (0.0045) eq_factor_demand(com5,reg3,fac1)
+       (0.0045) eq_factor_demand(com6,reg3,fac1)
+       (3.5)    eq_income(reg3)
+     (200)      eq_zero_profits(com1,reg3)
+     (200)      eq_zero_profits(com2,reg3)
+     (200)      eq_zero_profits(com3,reg3)
+     (200)      eq_zero_profits(com4,reg3)
+     (200)      eq_zero_profits(com5,reg3)
+     (200)      eq_zero_profits(com6,reg3)
+      (-0.4786) eq_c(com1,reg3)
+      (-0.4786) eq_c(com2,reg3)
+      (-0.4786) eq_c(com3,reg3)
+      (-0.4786) eq_c(com4,reg3)
+      (-0.4786) eq_c(com5,reg3)
+      (-0.4786) eq_c(com6,reg3)
+
+REMAINING 47 ENTRIES SKIPPED
+
+---- qe  
+
+qe(fac1,com1,reg1)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+        1       eq_factor_demand(com1,reg1,fac1)
+        1       eq_factor_clear(fac1,reg1)
+     (210)      eq_zero_profits(com1,reg1)
+
+qe(fac1,com1,reg2)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+        1       eq_factor_demand(com1,reg2,fac1)
+        1       eq_factor_clear(fac1,reg2)
+     (210)      eq_zero_profits(com1,reg2)
+
+qe(fac1,com1,reg3)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+        1       eq_factor_demand(com1,reg3,fac1)
+        1       eq_factor_clear(fac1,reg3)
+     (210)      eq_zero_profits(com1,reg3)
+
+REMAINING 297 ENTRIES SKIPPED
+
+---- y  
+
+y(reg1)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+      (-0.006)  eq_demand(com1,reg1)
+      (-0.0009) eq_demand(com2,reg1)
+      (-0.0009) eq_demand(com3,reg1)
+      (-0.0009) eq_demand(com4,reg1)
+      (-0.0009) eq_demand(com5,reg1)
+      (-0.0009) eq_demand(com6,reg1)
+       -1       eq_income(reg1)
+
+y(reg2)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+      (-0.012)  eq_demand(com1,reg2)
+      (-0.0009) eq_demand(com2,reg2)
+      (-0.0009) eq_demand(com3,reg2)
+      (-0.0009) eq_demand(com4,reg2)
+      (-0.0009) eq_demand(com5,reg2)
+      (-0.0009) eq_demand(com6,reg2)
+       -1       eq_income(reg2)
+
+y(reg3)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+      (-0.018)  eq_demand(com1,reg3)
+      (-0.0008) eq_demand(com2,reg3)
+      (-0.0008) eq_demand(com3,reg3)
+      (-0.0008) eq_demand(com4,reg3)
+      (-0.0008) eq_demand(com5,reg3)
+      (-0.0008) eq_demand(com6,reg3)
+       -1       eq_income(reg3)
+
+REMAINING 7 ENTRIES SKIPPED
+
+---- qet  
+
+qet(fac1,reg1)
+                (.LO, .L, .UP, .M = 1.5, 1.5, 1.5, 0)
+     (210)      eq_income(reg1)
+       -1       eq_factor_clear(fac1,reg1)
+
+qet(fac1,reg2)
+                (.LO, .L, .UP, .M = 2.5, 2.5, 2.5, 0)
+     (210)      eq_income(reg2)
+       -1       eq_factor_clear(fac1,reg2)
+
+qet(fac1,reg3)
+                (.LO, .L, .UP, .M = 3.5, 3.5, 3.5, 0)
+     (210)      eq_income(reg3)
+       -1       eq_factor_clear(fac1,reg3)
+
+REMAINING 47 ENTRIES SKIPPED
+
+---- c  
+
+c(com1,reg1)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+      (-0.0002) eq_factor_demand(com1,reg1,fac1)
+      (-0.0193) eq_factor_demand(com1,reg1,fac2)
+      (-0.0193) eq_factor_demand(com1,reg1,fac3)
+      (-0.0193) eq_factor_demand(com1,reg1,fac4)
+      (-0.0193) eq_factor_demand(com1,reg1,fac5)
+
+c(com1,reg2)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+      (-0.0014) eq_factor_demand(com1,reg2,fac1)
+      (-0.017)  eq_factor_demand(com1,reg2,fac2)
+      (-0.017)  eq_factor_demand(com1,reg2,fac3)
+      (-0.017)  eq_factor_demand(com1,reg2,fac4)
+      (-0.017)  eq_factor_demand(com1,reg2,fac5)
+        1       eq_c(com1,reg2)
+
+c(com1,reg3)
+                (.LO, .L, .UP, .M = 0.01, 200, +INF, 0)
+      (-0.0047) eq_factor_demand(com1,reg3,fac1)
+      (-0.0148) eq_factor_demand(com1,reg3,fac2)
+      (-0.0148) eq_factor_demand(com1,reg3,fac3)
+      (-0.0148) eq_factor_demand(com1,reg3,fac4)
+      (-0.0148) eq_factor_demand(com1,reg3,fac5)
+        1       eq_c(com1,reg3)
+
+REMAINING 57 ENTRIES SKIPPED
+
+---- dum  
+
+dum
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       eq_dum
+
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 19:35:25 Page 4
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE m Using NLP From line 189
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           8     SINGLE EQUATIONS          546
+BLOCKS OF VARIABLES           9     SINGLE VARIABLES          597
+NON ZERO ELEMENTS         3,335     NON LINEAR N-Z          2,435
+CODE LENGTH               6,915     CONSTANT POOL             186
+
+
+GENERATION TIME      =        0.047 SECONDS      4 MB  33.2.0 r4f23b21 WEX-WEI
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 19:35:25 Page 5
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE m Using NLP From line 189
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   m                   OBJECTIVE  dum
+     TYPE    NLP                 DIRECTION  MINIMIZE
+     SOLVER  CONOPT              FROM LINE  189
+
+**** SOLVER STATUS     1 Normal Completion         
+**** MODEL STATUS      5 Locally Infeasible        
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          1.047 10000000000.000
+ ITERATION COUNT, LIMIT       789    2147483647
+ EVALUATION ERRORS              0             0
+CONOPT 3         33.2.0 r4f23b21 Released Dec 01, 2020 WEI x86 64bit/MS Window
+ 
+ 
+    C O N O P T 3   version 3.17L
+    Copyright (C)   ARKI Consulting and Development A/S
+                    Bagsvaerdvej 246 A
+                    DK-2880 Bagsvaerd, Denmark
+ 
+ 
+ ** Warning **  The variance of the derivatives in the initial
+                point is large (= 4.4 ). A better initial
+                point, a better scaling, or better bounds on the
+                variables will probably help the optimization.
+ 
+ 
+                   Pre-triangular equations:   0
+                   Post-triangular equations:  1
+                   Definitional equations:     10
+ 
+ 
+ ** Infeasible solution. Reduced gradient less than tolerance.
+ 
+ 
+ CONOPT time Total                            1.054 seconds
+   of which: Function evaluations             0.424 = 40.2%
+             1st Derivative evaluations       0.037 =  3.5%
+ 
+
+---- EQU eq_demand  
+
+              LOWER     LEVEL     UPPER    MARGINAL
+
+com1.reg1      0.002     0.002     0.002    -1.008      
+com1.reg2      0.005     0.005     0.005    -1.022      
+com1.reg3      0.007     0.007     0.007    -1.008      
+com1.reg4      0.010     0.010     0.010    -1.008      
+com1.reg5      0.012     0.012     0.012    -1.008      
+com1.reg6      0.015     0.015     0.015    -1.008      
+com1.reg7      0.017     0.017     0.017    -1.008      
+com1.reg8      0.020     0.020     0.020    -1.008      
+com1.reg9      0.022     0.022     0.022    -1.008      
+com1.reg10     0.025     0.025     0.025    -1.008      
+com2.reg1      0.005     0.005     0.005    -1.008      
+com2.reg2      0.010     0.010     0.010    -1.008      
+com2.reg3      0.015     0.015     0.015    -1.008      
+com2.reg4      0.020     0.020     0.020    -1.008      
+com2.reg5      0.025     0.025     0.025    -1.008      
+com2.reg6      0.030     0.030     0.030    -1.008      
+com2.reg7      0.035     0.035     0.035    -1.008      
+com2.reg8      0.040     0.040     0.040    -1.008      
+com2.reg9      0.045     0.045     0.045    -1.008      
+com2.reg10     0.050     0.050     0.050    -1.008      
+com3.reg1      0.008     0.008     0.008    -1.008      
+com3.reg2      0.015     0.015     0.015    -1.008      
+com3.reg3      0.022     0.022     0.022    -1.008      
+com3.reg4      0.030     0.030     0.030    -1.008      
+com3.reg5      0.037     0.037     0.037    -1.008      
+com3.reg6      0.045     0.045     0.045    -1.008      
+com3.reg7      0.052     0.052     0.052    -1.008      
+com3.reg8      0.060     0.060     0.060    -1.008      
+com3.reg9      0.068     0.068     0.068    -1.008      
+com3.reg10     0.075     0.075     0.075    -1.008      
+com4.reg1      0.010     0.010     0.010    -1.008      
+com4.reg2      0.020     0.020     0.020    -1.008      
+com4.reg3      0.030     0.030     0.030    -1.008      
+com4.reg4      0.040     0.040     0.040    -1.008      
+com4.reg5      0.050     0.050     0.050    -1.008      
+com4.reg6      0.060     0.060     0.060    -1.008      
+com4.reg7      0.070     0.070     0.070    -1.008      
+com4.reg8      0.080     0.080     0.080    -1.008      
+com4.reg9      0.090     0.090     0.090    -1.008      
+com4.reg10     0.100     0.100     0.100    -1.008      
+com5.reg1      0.012     0.012     0.012    -1.008      
+com5.reg2      0.025     0.025     0.025    -1.008      
+com5.reg3      0.037     0.037     0.037    -1.008      
+com5.reg4      0.050     0.050     0.050    -1.008      
+com5.reg5      0.062     0.062     0.062    -1.008      
+com5.reg6      0.075     0.075     0.075    -1.008      
+com5.reg7      0.088     0.088     0.088    -1.008      
+com5.reg8      0.100     0.100     0.100    -1.008      
+com5.reg9      0.112     0.112     0.112    -1.008      
+com5.reg10     0.125     0.125     0.125    -1.008      
+com6.reg1      0.015     0.015     0.015    -1.008      
+com6.reg2      0.030     0.030     0.030    -1.008      
+com6.reg3      0.045     0.045     0.045    -1.008      
+com6.reg4      0.060     0.060     0.060    -1.008      
+com6.reg5      0.075     0.075     0.075    -1.008      
+com6.reg6      0.090     0.090     0.090    -1.008      
+com6.reg7      0.105     0.105     0.105    -1.008      
+com6.reg8      0.120     0.120     0.120    -1.008      
+com6.reg9      0.135     0.135     0.135    -1.008      
+com6.reg10     0.150     0.150     0.150    -1.008      
+
+---- EQU eq_market_clear  
+
+        LOWER     LEVEL     UPPER    MARGINAL
+
+com1      .         .         .        1.008      
+com2      .         .         .        1.008      
+com3      .         .         .        1.008      
+com4      .         .         .        1.008      
+com5      .         .         .        1.008      
+com6      .         .         .        1.008      
+
+---- EQU eq_factor_demand  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+com1.reg1 .fac1      .         .         .         EPS       
+com1.reg1 .fac2      .         .         .         EPS       
+com1.reg1 .fac3      .         .         .         EPS       
+com1.reg1 .fac4      .         .         .         EPS       
+com1.reg1 .fac5      .         .         .         EPS       
+com1.reg2 .fac1      .         .         .        0.019      
+com1.reg2 .fac2      .         .         .       -0.004      
+com1.reg2 .fac3      .         .         .       -0.003      
+com1.reg2 .fac4      .         .         .       -0.003      
+com1.reg2 .fac5      .         .         .       -0.003      
+com1.reg3 .fac1      .         .         .       -0.120      
+com1.reg3 .fac2      .         .         .       -0.168      
+com1.reg3 .fac3      .         .         .       -0.162      
+com1.reg3 .fac4      .         .         .       -0.156      
+com1.reg3 .fac5      .         .         .       -0.151      
+com1.reg4 .fac1      .         .         .        0.424      
+com1.reg4 .fac2      .         .         .        0.430      
+com1.reg4 .fac3      .         .         .        0.417      
+com1.reg4 .fac4      .         .         .        0.405      
+com1.reg4 .fac5      .         .         .        0.394      
+com1.reg5 .fac1      .         .         .        0.596      
+com1.reg5 .fac2      .         .         .        0.463      
+com1.reg5 .fac3      .         .         .        0.451      
+com1.reg5 .fac4      .         .         .        0.440      
+com1.reg5 .fac5      .         .         .        0.430      
+com1.reg6 .fac1      .         .         .       -0.232      
+com1.reg6 .fac2      .         .         .       -0.144      
+com1.reg6 .fac3      .         .         .       -0.140      
+com1.reg6 .fac4      .         .         .       -0.137      
+com1.reg6 .fac5      .         .         .       -0.135      
+com1.reg7 .fac1      .         .         .       -0.270      
+com1.reg7 .fac2      .         .         .       -0.136      
+com1.reg7 .fac3      .         .         .       -0.133      
+com1.reg7 .fac4      .         .         .       -0.131      
+com1.reg7 .fac5      .         .         .       -0.129      
+com1.reg8 .fac1      .         .         .       -0.307      
+com1.reg8 .fac2      .         .         .       -0.128      
+com1.reg8 .fac3      .         .         .       -0.126      
+com1.reg8 .fac4      .         .         .       -0.124      
+com1.reg8 .fac5      .         .         .       -0.125      
+com1.reg9 .fac1      .         .         .       -0.347      
+com1.reg9 .fac2      .         .         .       -0.121      
+com1.reg9 .fac3      .         .         .       -0.119      
+com1.reg9 .fac4      .         .         .       -0.118      
+com1.reg9 .fac5      .         .         .       -0.116      
+com1.reg10.fac1      .         .         .       -0.386      
+com1.reg10.fac2      .         .         .       -0.114      
+com1.reg10.fac3      .         .         .       -0.112      
+com1.reg10.fac4      .         .         .       -0.111      
+com1.reg10.fac5      .         .         .       -0.109      
+com2.reg1 .fac1      .         .         .         EPS       
+com2.reg1 .fac2      .         .         .         EPS       
+com2.reg1 .fac3      .         .         .         EPS       
+com2.reg1 .fac4      .         .         .         EPS       
+com2.reg1 .fac5      .         .         .         EPS       
+com2.reg2 .fac1      .         .         .       -1.008      
+com2.reg2 .fac2      .         .         .       -0.013      
+com2.reg2 .fac3      .         .         .       -0.013      
+com2.reg2 .fac4      .         .         .       -0.012      
+com2.reg2 .fac5      .         .         .       -0.012      
+com2.reg3 .fac1      .         .         .       -0.120      
+com2.reg3 .fac2      .         .         .       -0.168      
+com2.reg3 .fac3      .         .         .       -0.162      
+com2.reg3 .fac4      .         .         .       -0.156      
+com2.reg3 .fac5      .         .         .       -0.151      
+com2.reg4 .fac1      .         .         .         EPS       
+com2.reg4 .fac2      .         .         .         EPS       
+com2.reg4 .fac3      .         .         .         EPS       
+com2.reg4 .fac4      .         .         .         EPS       
+com2.reg4 .fac5      .         .         .         EPS       
+com2.reg5 .fac1      .         .         .         EPS       
+com2.reg5 .fac2      .         .         .         EPS       
+com2.reg5 .fac3      .         .         .         .         
+com2.reg5 .fac4      .         .         .         EPS       
+com2.reg5 .fac5      .         .         .         EPS       
+com2.reg6 .fac1      .         .         .       -0.232      
+com2.reg6 .fac2      .         .         .       -0.144      
+com2.reg6 .fac3      .         .         .       -0.140      
+com2.reg6 .fac4      .         .         .       -0.137      
+com2.reg6 .fac5      .         .         .       -0.135      
+com2.reg7 .fac1      .         .         .         EPS       
+com2.reg7 .fac2      .         .         .         EPS       
+com2.reg7 .fac3      .         .         .         EPS       
+com2.reg7 .fac4      .         .         .         EPS       
+com2.reg7 .fac5      .         .         .         .         
+com2.reg8 .fac1      .         .         .        0.004      
+com2.reg8 .fac2      .         .         .        0.002      
+com2.reg8 .fac3      .         .         .        0.002      
+com2.reg8 .fac4      .         .         .        0.002      
+com2.reg8 .fac5      .         .         .         .         
+com2.reg9 .fac1      .         .         .        0.085      
+com2.reg9 .fac2      .         .         .        0.030      
+com2.reg9 .fac3      .         .         .        0.029      
+com2.reg9 .fac4      .         .         .        0.029      
+com2.reg9 .fac5      .         .         .        0.028      
+com2.reg10.fac1      .         .         .         .         
+com2.reg10.fac2      .         .         .         EPS       
+com2.reg10.fac3      .         .         .         EPS       
+com2.reg10.fac4      .         .         .         EPS       
+com2.reg10.fac5      .         .         .         EPS       
+com3.reg1 .fac1      .         .         .         EPS       
+com3.reg1 .fac2      .         .         .         EPS       
+com3.reg1 .fac3      .         .         .         EPS       
+com3.reg1 .fac4      .         .         .         EPS       
+com3.reg1 .fac5      .         .         .         EPS       
+com3.reg2 .fac1      .         .         .       -1.008      
+com3.reg2 .fac2      .         .         .       -0.013      
+com3.reg2 .fac3      .         .         .       -0.013      
+com3.reg2 .fac4      .         .         .       -0.012      
+com3.reg2 .fac5      .         .         .       -0.012      
+com3.reg3 .fac1      .         .         .       40.667      
+com3.reg3 .fac2      .         .         .       57.049      
+com3.reg3 .fac3      .         .         .       54.852      
+com3.reg3 .fac4      .         .         .       52.959      
+com3.reg3 .fac5      .         .         .       51.303      
+com3.reg4 .fac1      .         .         .         .         
+com3.reg4 .fac2      .         .         .         EPS       
+com3.reg4 .fac3      .         .         .         EPS       
+com3.reg4 .fac4      .         .         .         EPS       
+com3.reg4 .fac5      .         .         .         EPS       
+com3.reg5 .fac1      .         .         .       -0.195      
+com3.reg5 .fac2      .         .         .       -0.151      
+com3.reg5 .fac3      .         .         .       -0.147      
+com3.reg5 .fac4      .         .         .       -0.144      
+com3.reg5 .fac5      .         .         .       -0.140      
+com3.reg6 .fac1      .         .         .       -0.232      
+com3.reg6 .fac2      .         .         .       -0.144      
+com3.reg6 .fac3      .         .         .       -0.140      
+com3.reg6 .fac4      .         .         .       -0.137      
+com3.reg6 .fac5      .         .         .       -0.135      
+com3.reg7 .fac1      .         .         .       -0.270      
+com3.reg7 .fac2      .         .         .       -0.136      
+com3.reg7 .fac3      .         .         .       -0.133      
+com3.reg7 .fac4      .         .         .       -0.131      
+com3.reg7 .fac5      .         .         .       -0.129      
+com3.reg8 .fac1      .         .         .    6.9703E-4      
+com3.reg8 .fac2      .         .         .    2.9065E-4      
+com3.reg8 .fac3      .         .         .    2.8546E-4      
+com3.reg8 .fac4      .         .         .    2.8062E-4      
+com3.reg8 .fac5      .         .         .       -0.001      
+com3.reg9 .fac1      .         .         .       -0.842      
+com3.reg9 .fac2      .         .         .       -0.294      
+com3.reg9 .fac3      .         .         .       -0.289      
+com3.reg9 .fac4      .         .         .       -0.285      
+com3.reg9 .fac5      .         .         .       -0.281      
+com3.reg10.fac1      .         .         .         EPS       
+com3.reg10.fac2      .         .         .         EPS       
+com3.reg10.fac3      .         .         .         EPS       
+com3.reg10.fac4      .         .         .         EPS       
+com3.reg10.fac5      .         .         .         EPS       
+com4.reg1 .fac1      .         .         .         EPS       
+com4.reg1 .fac2      .         .         .         EPS       
+com4.reg1 .fac3      .         .         .         EPS       
+com4.reg1 .fac4      .         .         .         EPS       
+com4.reg1 .fac5      .         .         .         EPS       
+com4.reg2 .fac1      .         .         .       -1.008      
+com4.reg2 .fac2      .         .         .       -0.013      
+com4.reg2 .fac3      .         .         .       -0.013      
+com4.reg2 .fac4      .         .         .       -0.012      
+com4.reg2 .fac5      .         .         .       -0.012      
+com4.reg3 .fac1      .         .         .       -0.120      
+com4.reg3 .fac2      .         .         .       -0.168      
+com4.reg3 .fac3      .         .         .       -0.162      
+com4.reg3 .fac4      .         .         .       -0.156      
+com4.reg3 .fac5      .         .         .       -0.151      
+com4.reg4 .fac1      .         .         .       -6.553      
+com4.reg4 .fac2      .         .         .       -6.643      
+com4.reg4 .fac3      .         .         .       -6.435      
+com4.reg4 .fac4      .         .         .       -6.251      
+com4.reg4 .fac5      .         .         .       -6.087      
+com4.reg5 .fac1      .         .         .       -0.195      
+com4.reg5 .fac2      .         .         .       -0.151      
+com4.reg5 .fac3      .         .         .       -0.147      
+com4.reg5 .fac4      .         .         .       -0.144      
+com4.reg5 .fac5      .         .         .       -0.140      
+com4.reg6 .fac1      .         .         .       -0.232      
+com4.reg6 .fac2      .         .         .       -0.144      
+com4.reg6 .fac3      .         .         .       -0.140      
+com4.reg6 .fac4      .         .         .       -0.137      
+com4.reg6 .fac5      .         .         .       -0.135      
+com4.reg7 .fac1      .         .         .       -0.270      
+com4.reg7 .fac2      .         .         .       -0.136      
+com4.reg7 .fac3      .         .         .       -0.133      
+com4.reg7 .fac4      .         .         .       -0.131      
+com4.reg7 .fac5      .         .         .       -0.129      
+com4.reg8 .fac1      .         .         .    6.9703E-4      
+com4.reg8 .fac2      .         .         .    2.9065E-4      
+com4.reg8 .fac3      .         .         .    2.8546E-4      
+com4.reg8 .fac4      .         .         .    2.8062E-4      
+com4.reg8 .fac5      .         .         .       -0.001      
+com4.reg9 .fac1      .         .         .        1.385      
+com4.reg9 .fac2      .         .         .        0.484      
+com4.reg9 .fac3      .         .         .        0.476      
+com4.reg9 .fac4      .         .         .        0.469      
+com4.reg9 .fac5      .         .         .        0.462      
+com4.reg10.fac1      .         .         .        1.332      
+com4.reg10.fac2      .         .         .        0.393      
+com4.reg10.fac3      .         .         .        0.388      
+com4.reg10.fac4      .         .         .        0.382      
+com4.reg10.fac5      .         .         .        0.377      
+com5.reg1 .fac1      .         .         .         EPS       
+com5.reg1 .fac2      .         .         .         EPS       
+com5.reg1 .fac3      .         .         .         EPS       
+com5.reg1 .fac4      .         .         .         EPS       
+com5.reg1 .fac5      .         .         .         EPS       
+com5.reg2 .fac1      .         .         .       -1.008      
+com5.reg2 .fac2      .         .         .       -0.013      
+com5.reg2 .fac3      .         .         .       -0.013      
+com5.reg2 .fac4      .         .         .       -0.012      
+com5.reg2 .fac5      .         .         .       -0.012      
+com5.reg3 .fac1      .         .         .       -0.120      
+com5.reg3 .fac2      .         .         .       -0.168      
+com5.reg3 .fac3      .         .         .       -0.162      
+com5.reg3 .fac4      .         .         .       -0.156      
+com5.reg3 .fac5      .         .         .       -0.151      
+com5.reg4 .fac1      .         .         .         EPS       
+com5.reg4 .fac2      .         .         .         EPS       
+com5.reg4 .fac3      .         .         .         EPS       
+com5.reg4 .fac4      .         .         .         EPS       
+com5.reg4 .fac5      .         .         .         EPS       
+com5.reg5 .fac1      .         .         .       -0.660      
+com5.reg5 .fac2      .         .         .       -0.513      
+com5.reg5 .fac3      .         .         .       -0.500      
+com5.reg5 .fac4      .         .         .       -0.487      
+com5.reg5 .fac5      .         .         .       -0.476      
+com5.reg6 .fac1      .         .         .        9.742      
+com5.reg6 .fac2      .         .         .        6.020      
+com5.reg6 .fac3      .         .         .        5.883      
+com5.reg6 .fac4      .         .         .        5.758      
+com5.reg6 .fac5      .         .         .        5.642      
+com5.reg7 .fac1      .         .         .        0.674      
+com5.reg7 .fac2      .         .         .        0.339      
+com5.reg7 .fac3      .         .         .        0.332      
+com5.reg7 .fac4      .         .         .        0.326      
+com5.reg7 .fac5      .         .         .        0.320      
+com5.reg8 .fac1      .         .         .        1.198      
+com5.reg8 .fac2      .         .         .        0.499      
+com5.reg8 .fac3      .         .         .        0.491      
+com5.reg8 .fac4      .         .         .        0.482      
+com5.reg8 .fac5      .         .         .        0.479      
+com5.reg9 .fac1      .         .         .       -0.347      
+com5.reg9 .fac2      .         .         .       -0.121      
+com5.reg9 .fac3      .         .         .       -0.119      
+com5.reg9 .fac4      .         .         .       -0.118      
+com5.reg9 .fac5      .         .         .       -0.116      
+com5.reg10.fac1      .         .         .       -0.386      
+com5.reg10.fac2      .         .         .       -0.114      
+com5.reg10.fac3      .         .         .       -0.112      
+com5.reg10.fac4      .         .         .       -0.111      
+com5.reg10.fac5      .         .         .       -0.109      
+com6.reg1 .fac1      .         .         .         EPS       
+com6.reg1 .fac2      .         .         .         EPS       
+com6.reg1 .fac3      .         .         .         EPS       
+com6.reg1 .fac4      .         .         .         EPS       
+com6.reg1 .fac5      .         .         .         EPS       
+com6.reg2 .fac1      .         .         .       -1.008      
+com6.reg2 .fac2      .         .         .       -0.013      
+com6.reg2 .fac3      .         .         .       -0.013      
+com6.reg2 .fac4      .         .         .       -0.012      
+com6.reg2 .fac5      .         .         .       -0.012      
+com6.reg3 .fac1      .         .         .       -0.120      
+com6.reg3 .fac2      .         .         .       -0.168      
+com6.reg3 .fac3      .         .         .       -0.162      
+com6.reg3 .fac4      .         .         .       -0.156      
+com6.reg3 .fac5      .         .         .       -0.151      
+com6.reg4 .fac1      .         .         .         EPS       
+com6.reg4 .fac2      .         .         .         EPS       
+com6.reg4 .fac3      .         .         .         EPS       
+com6.reg4 .fac4      .         .         .         EPS       
+com6.reg4 .fac5      .         .         .         EPS       
+com6.reg5 .fac1      .         .         .       -0.195      
+com6.reg5 .fac2      .         .         .       -0.151      
+com6.reg5 .fac3      .         .         .       -0.147      
+com6.reg5 .fac4      .         .         .       -0.144      
+com6.reg5 .fac5      .         .         .       -0.140      
+com6.reg6 .fac1      .         .         .        0.934      
+com6.reg6 .fac2      .         .         .        0.577      
+com6.reg6 .fac3      .         .         .        0.564      
+com6.reg6 .fac4      .         .         .        0.552      
+com6.reg6 .fac5      .         .         .        0.541      
+com6.reg7 .fac1      .         .         .       -0.270      
+com6.reg7 .fac2      .         .         .       -0.136      
+com6.reg7 .fac3      .         .         .       -0.133      
+com6.reg7 .fac4      .         .         .       -0.131      
+com6.reg7 .fac5      .         .         .       -0.129      
+com6.reg8 .fac1      .         .         .    6.9703E-4      
+com6.reg8 .fac2      .         .         .    2.9065E-4      
+com6.reg8 .fac3      .         .         .    2.8546E-4      
+com6.reg8 .fac4      .         .         .    2.8062E-4      
+com6.reg8 .fac5      .         .         .       -0.001      
+com6.reg9 .fac1      .         .         .       -0.347      
+com6.reg9 .fac2      .         .         .       -0.121      
+com6.reg9 .fac3      .         .         .       -0.119      
+com6.reg9 .fac4      .         .         .       -0.118      
+com6.reg9 .fac5      .         .         .       -0.116      
+com6.reg10.fac1      .         .         .         EPS       
+com6.reg10.fac2      .         .         .         EPS       
+com6.reg10.fac3      .         .         .         EPS       
+com6.reg10.fac4      .         .         .         .         
+com6.reg10.fac5      .         .         .         EPS       
+
+---- EQU eq_income  
+
+         LOWER     LEVEL     UPPER    MARGINAL
+
+reg1       .         .         .        0.101      
+reg2       .         .         .        0.101      
+reg3       .         .         .        0.101      
+reg4       .         .         .        0.101      
+reg5       .         .         .        0.101      
+reg6       .         .         .        0.101      
+reg7       .         .         .        0.101      
+reg8       .         .         .        0.101      
+reg9       .         .         .        0.101      
+reg10      .         .         .        0.101      
+
+---- EQU eq_factor_clear  
+
+              LOWER     LEVEL     UPPER    MARGINAL
+
+fac1.reg1       .         .         .        0.044      
+fac1.reg2       .         .         .       -0.014      
+fac1.reg3       .         .         .        0.120      
+fac1.reg4       .         .         .        0.157      
+fac1.reg5       .         .         .        0.195      
+fac1.reg6       .         .         .        0.232      
+fac1.reg7       .         .         .        0.270      
+fac1.reg8       .         .         .        0.307      
+fac1.reg9       .         .         .        0.347      
+fac1.reg10      .         .         .        0.386      
+fac2.reg1       .         .         .        0.191      
+fac2.reg2       .         .         .        0.013      
+fac2.reg3       .         .         .        0.168      
+fac2.reg4       .         .         .        0.159      
+fac2.reg5       .         .         .        0.151      
+fac2.reg6       .         .         .        0.144      
+fac2.reg7       .         .         .        0.136      
+fac2.reg8       .         .         .        0.128      
+fac2.reg9       .         .         .        0.121      
+fac2.reg10      .         .         .        0.114      
+fac3.reg1       .         .         .        0.178      
+fac3.reg2       .         .         .        0.013      
+fac3.reg3       .         .         .        0.162      
+fac3.reg4       .         .         .        0.154      
+fac3.reg5       .         .         .        0.147      
+fac3.reg6       .         .         .        0.140      
+fac3.reg7       .         .         .        0.133      
+fac3.reg8       .         .         .        0.126      
+fac3.reg9       .         .         .        0.119      
+fac3.reg10      .         .         .        0.112      
+fac4.reg1       .         .         .        0.167      
+fac4.reg2       .         .         .        0.012      
+fac4.reg3       .         .         .        0.156      
+fac4.reg4       .         .         .        0.150      
+fac4.reg5       .         .         .        0.144      
+fac4.reg6       .         .         .        0.137      
+fac4.reg7       .         .         .        0.131      
+fac4.reg8       .         .         .        0.124      
+fac4.reg9       .         .         .        0.118      
+fac4.reg10      .         .         .        0.111      
+fac5.reg1       .         .         .        0.159      
+fac5.reg2       .         .         .        0.012      
+fac5.reg3       .         .         .        0.151      
+fac5.reg4       .         .         .        0.146      
+fac5.reg5       .         .         .        0.140      
+fac5.reg6       .         .         .        0.135      
+fac5.reg7       .         .         .        0.129      
+fac5.reg8       .       -0.410      .        0.125 INFES
+fac5.reg9       .         .         .        0.116      
+fac5.reg10      .         .         .        0.109      
+
+---- EQU eq_zero_profits  
+
+              LOWER     LEVEL     UPPER    MARGINAL
+
+com1.reg1       .         .         .       -0.101      
+com1.reg2       .         .         .       -0.098      
+com1.reg3       .         .         .         .         
+com1.reg4       .         .         .       -0.373      
+com1.reg5       .         .         .       -0.409      
+com1.reg6       .         .         .         .         
+com1.reg7       .         .         .         .         
+com1.reg8       .         .         .         .         
+com1.reg9       .         .         .         .         
+com1.reg10      .         .         .         .         
+com2.reg1       .         .         .       -0.101      
+com2.reg2       .       -0.101      .    9.7656E-4 INFES
+com2.reg3       .         .         .         .         
+com2.reg4       .         .         .       -0.101      
+com2.reg5       .         .         .       -0.101      
+com2.reg6       .         .         .         .         
+com2.reg7       .         .         .       -0.101      
+com2.reg8       .         .         .       -0.102      
+com2.reg9       .         .         .       -0.125      
+com2.reg10      .         .         .       -0.101      
+com3.reg1       .         .         .       -0.101      
+com3.reg2       .       -0.101      .    9.7656E-4 INFES
+com3.reg3       .         .         .      -34.306      
+com3.reg4       .         .         .       -0.101      
+com3.reg5       .         .         .         .         
+com3.reg6       .         .         .         .         
+com3.reg7       .         .         .         .         
+com3.reg8       .         .         .       -0.101      
+com3.reg9       .         .         .        0.144      
+com3.reg10      .         .         .       -0.101      
+com4.reg1       .         .         .       -0.101      
+com4.reg2       .       -0.101      .    9.7656E-4 INFES
+com4.reg3       .         .         .         .         
+com4.reg4       .         .         .        4.100      
+com4.reg5       .         .         .         .         
+com4.reg6       .         .         .         .         
+com4.reg7       .         .         .         .         
+com4.reg8       .         .         .       -0.101      
+com4.reg9       .         .         .       -0.503      
+com4.reg10      .         .         .       -0.448      
+com5.reg1       .         .         .       -0.101      
+com5.reg2       .       -0.101      .    9.7656E-4 INFES
+com5.reg3       .         .         .         .         
+com5.reg4       .         .         .       -0.101      
+com5.reg5       .         .         .        0.241      
+com5.reg6       .         .         .       -4.325      
+com5.reg7       .         .         .       -0.352      
+com5.reg8       .         .         .       -0.493      
+com5.reg9       .         .         .         .         
+com5.reg10      .         .         .         .         
+com6.reg1       .         .         .       -0.101      
+com6.reg2       .       -0.101      .    9.7656E-4 INFES
+com6.reg3       .         .         .         .         
+com6.reg4       .         .         .       -0.101      
+com6.reg5       .         .         .         .         
+com6.reg6       .         .         .       -0.506      
+com6.reg7       .         .         .         .         
+com6.reg8       .         .         .       -0.101      
+com6.reg9       .         .         .         .         
+com6.reg10      .         .         .       -0.101      
+
+---- EQU eq_c  
+
+              LOWER     LEVEL     UPPER    MARGINAL
+
+com1.reg2       .        0.897      .       -0.008 INFES
+com1.reg3       .         .         .       -0.600      
+com1.reg4       .         .         .        3.037      
+com1.reg5       .         .         .        1.523      
+com1.reg6       .         .         .       -0.732      
+com1.reg7       .         .         .       -0.663      
+com1.reg8       .         .         .       -0.658      
+com1.reg9       .         .         .       -1.009      
+com1.reg10      .         .         .       -0.899      
+com2.reg1       .         .         .         .         
+com2.reg2       .         .         .       -0.059      
+com2.reg3       .         .         .       -0.003      
+com2.reg4       .         .         .         .         
+com2.reg5       .         .         .         EPS       
+com2.reg6       .         .         .       -0.095      
+com2.reg7       .         .         .         EPS       
+com2.reg8       .         .         .        0.004      
+com2.reg9       .         .         .        0.097      
+com2.reg10      .         .         .         EPS       
+com3.reg1       .         .         .         .         
+com3.reg2       .         .         .       -0.059      
+com3.reg3       .         .         .        1.026      
+com3.reg4       .         .         .         EPS       
+com3.reg5       .         .         .       -0.003      
+com3.reg6       .         .         .       -0.419      
+com3.reg7       .         .         .       -0.108      
+com3.reg8       .         .         .         .         
+com3.reg9       .         .         .       -0.493      
+com3.reg10      .         .         .         .         
+com4.reg1       .         .         .         EPS       
+com4.reg2       .         .         .       -0.059      
+com4.reg3       .         .         .       -0.208      
+com4.reg4       .         .         .       -3.037      
+com4.reg5       .         .         .       -0.042      
+com4.reg6       .         .         .       -0.173      
+com4.reg7       .         .         .       -0.102      
+com4.reg8       .         .         .         .         
+com4.reg9       .         .         .        1.850      
+com4.reg10      .         .         .        1.717      
+com5.reg1       .         .         .         .         
+com5.reg2       .         .         .       -0.059      
+com5.reg3       .         .         .       -0.091      
+com5.reg4       .         .         .         .         
+com5.reg5       .         .         .       -1.059      
+com5.reg6       .         .         .        0.127      
+com5.reg7       .         .         .        1.178      
+com5.reg8       .         .         .        0.669      
+com5.reg9       .         .         .       -0.003      
+com5.reg10      .         .         .       -0.817      
+com6.reg1       .         .         .         .         
+com6.reg2       .         .         .       -0.059      
+com6.reg3       .         .         .       -0.124      
+com6.reg4       .         .         .         .         
+com6.reg5       .         .         .       -0.419      
+com6.reg6       .         .         .        1.292      
+com6.reg7       .         .         .       -0.305      
+com6.reg8       .         .         .         .         
+com6.reg9       .         .         .       -0.442      
+com6.reg10      .         .         .         EPS       
+
+                       LOWER     LEVEL     UPPER    MARGINAL
+
+---- EQU eq_dum          .         .        +INF       EPS       
+
+---- VAR p  
+
+        LOWER     LEVEL     UPPER    MARGINAL
+
+com1    10.000    10.000    10.000      EPS       
+com2     0.010    10.000     +INF       .         
+com3     0.010    10.000     +INF       .         
+com4     0.010    10.000     +INF       .         
+com5     0.010    10.000     +INF       .         
+com6     0.010    10.000     +INF       .         
+
+---- VAR qp  
+
+              LOWER     LEVEL     UPPER    MARGINAL
+
+com1.reg1      0.010     0.115     +INF       .         
+com1.reg2      0.010     0.010     +INF      0.014      
+com1.reg3      0.010     0.592     +INF       .         
+com1.reg4      0.010     0.960     +INF       .         
+com1.reg5      0.010     1.421     +INF       .         
+com1.reg6      0.010     1.977     +INF       .         
+com1.reg7      0.010     2.634     +INF       .         
+com1.reg8      0.010     3.395     +INF       .         
+com1.reg9      0.010     4.263     +INF       .         
+com1.reg10     0.010     5.244     +INF       .         
+com2.reg1      0.010     0.359     +INF       .         
+com2.reg2      0.010     0.017     +INF       .         
+com2.reg3      0.010     0.547     +INF       .         
+com2.reg4      0.010     0.622     +INF       .         
+com2.reg5      0.010     0.682     +INF       .         
+com2.reg6      0.010     0.728     +INF       .         
+com2.reg7      0.010     0.758     +INF       .         
+com2.reg8      0.010     0.771     +INF       .         
+com2.reg9      0.010     0.768     +INF       .         
+com2.reg10     0.010     0.746     +INF       .         
+com3.reg1      0.010     0.361     +INF       .         
+com3.reg2      0.010     0.022     +INF       .         
+com3.reg3      0.010     0.555     +INF       .         
+com3.reg4      0.010     0.632     +INF       .         
+com3.reg5      0.010     0.695     +INF       .         
+com3.reg6      0.010     0.743     +INF       .         
+com3.reg7      0.010     0.775     +INF       .         
+com3.reg8      0.010     0.791     +INF       .         
+com3.reg9      0.010     0.790     +INF       .         
+com3.reg10     0.010     0.771     +INF       .         
+com4.reg1      0.010     0.364     +INF       .         
+com4.reg2      0.010     0.027     +INF       .         
+com4.reg3      0.010     0.562     +INF       .         
+com4.reg4      0.010     0.642     +INF       .         
+com4.reg5      0.010     0.707     +INF       .         
+com4.reg6      0.010     0.758     +INF       .         
+com4.reg7      0.010     0.793     +INF       .         
+com4.reg8      0.010     0.811     +INF       .         
+com4.reg9      0.010     0.813     +INF       .         
+com4.reg10     0.010     0.796     +INF       .         
+com5.reg1      0.010     0.366     +INF       .         
+com5.reg2      0.010     0.032     +INF       .         
+com5.reg3      0.010     0.570     +INF       .         
+com5.reg4      0.010     0.652     +INF       .         
+com5.reg5      0.010     0.720     +INF       .         
+com5.reg6      0.010     0.773     +INF       .         
+com5.reg7      0.010     0.810     +INF       .         
+com5.reg8      0.010     0.831     +INF       .         
+com5.reg9      0.010     0.835     +INF       .         
+com5.reg10     0.010     0.821     +INF       .         
+com6.reg1      0.010     0.369     +INF       .         
+com6.reg2      0.010     0.037     +INF       .         
+com6.reg3      0.010     0.577     +INF       .         
+com6.reg4      0.010     0.662     +INF       .         
+com6.reg5      0.010     0.732     +INF       .         
+com6.reg6      0.010     0.788     +INF       .         
+com6.reg7      0.010     0.828     +INF       .         
+com6.reg8      0.010     0.851     +INF       .         
+com6.reg9      0.010     0.858     +INF       .         
+com6.reg10     0.010     0.846     +INF       .         
+
+---- VAR qs  
+
+              LOWER     LEVEL     UPPER    MARGINAL
+
+com1.reg1      0.010     0.013     +INF       .         
+com1.reg2      0.010     0.144     +INF       .         
+com1.reg3      0.010     1.985     +INF       .         
+com1.reg4      0.010     3.722     +INF       .         
+com1.reg5      0.010     1.645     +INF       .         
+com1.reg6      0.010     2.421     +INF       .         
+com1.reg7      0.010     2.193     +INF       .         
+com1.reg8      0.010     2.177     +INF       .         
+com1.reg9      0.010     3.338     +INF       .         
+com1.reg10     0.010     2.974     +INF       .         
+com2.reg1      0.010     0.013     +INF       .         
+com2.reg2      0.010     0.011     +INF       .         
+com2.reg3      0.010     0.010     +INF       EPS       
+com2.reg4      0.010     0.010     +INF       EPS       
+com2.reg5      0.010     0.743     +INF       .         
+com2.reg6      0.010     0.314     +INF       EPS       
+com2.reg7      0.010     1.138     +INF       .         
+com2.reg8      0.010     1.266     +INF       .         
+com2.reg9      0.010     1.309     +INF       .         
+com2.reg10     0.010     1.184     +INF       .         
+com3.reg1      0.010     1.508     +INF       .         
+com3.reg2      0.010     0.011     +INF       .         
+com3.reg3      0.010     0.010     +INF       EPS       
+com3.reg4      0.010     0.177     +INF       EPS       
+com3.reg5      0.010     0.010     +INF       EPS       
+com3.reg6      0.010     1.385     +INF       .         
+com3.reg7      0.010     0.357     +INF       EPS       
+com3.reg8      0.010     1.299     +INF       .         
+com3.reg9      0.010     0.673     +INF       .         
+com3.reg10     0.010     0.706     +INF       .         
+com4.reg1      0.010     0.013     +INF       .         
+com4.reg2      0.010     0.011     +INF       .         
+com4.reg3      0.010     0.689     +INF       .         
+com4.reg4      0.010     0.241     +INF       EPS       
+com4.reg5      0.010     0.140     +INF       EPS       
+com4.reg6      0.010     0.574     +INF       .         
+com4.reg7      0.010     0.339     +INF       EPS       
+com4.reg8      0.010     1.087     +INF       EPS       
+com4.reg9      0.010     1.535     +INF       .         
+com4.reg10     0.010     1.646     +INF       .         
+com5.reg1      0.010     0.200     +INF       .         
+com5.reg2      0.010     0.011     +INF       .         
+com5.reg3      0.010     0.301     +INF       EPS       
+com5.reg4      0.010     0.010     +INF       EPS       
+com5.reg5      0.010     1.033     +INF       .         
+com5.reg6      0.010     0.010     +INF       EPS       
+com5.reg7      0.010     1.564     +INF       .         
+com5.reg8      0.010     0.569     +INF       .         
+com5.reg9      0.010     0.010     +INF       EPS       
+com5.reg10     0.010     2.703     +INF       .         
+com6.reg1      0.010     0.189     +INF       .         
+com6.reg2      0.010     0.011     +INF       .         
+com6.reg3      0.010     0.409     +INF       .         
+com6.reg4      0.010     0.010     +INF       EPS       
+com6.reg5      0.010     1.386     +INF       .         
+com6.reg6      0.010     1.063     +INF       .         
+com6.reg7      0.010     1.008     +INF       .         
+com6.reg8      0.010     1.002     +INF       EPS       
+com6.reg9      0.010     1.461     +INF       .         
+com6.reg10     0.010     0.010     +INF       EPS       
+
+---- VAR pe  
+
+              LOWER     LEVEL     UPPER    MARGINAL
+
+fac1.reg1      0.010     0.435     +INF       .         
+fac1.reg2      0.010     0.045     +INF       .         
+fac1.reg3      0.010     1.189     +INF       .         
+fac1.reg4      0.010     1.560     +INF       .         
+fac1.reg5      0.010     1.932     +INF       .         
+fac1.reg6      0.010     2.306     +INF       .         
+fac1.reg7      0.010     2.683     +INF       .         
+fac1.reg8      0.010     3.056     +INF       .         
+fac1.reg9      0.010     3.445     +INF       .         
+fac1.reg10     0.010     3.831     +INF       .         
+fac2.reg1      0.010     1.899     +INF       .         
+fac2.reg2      0.010     0.097     +INF       .         
+fac2.reg3      0.010     1.668     +INF       .         
+fac2.reg4      0.010     1.581     +INF       .         
+fac2.reg5      0.010     1.501     +INF       .         
+fac2.reg6      0.010     1.425     +INF       .         
+fac2.reg7      0.010     1.350     +INF       .         
+fac2.reg8      0.010     1.274     +INF       .         
+fac2.reg9      0.010     1.204     +INF       .         
+fac2.reg10     0.010     1.132     +INF       .         
+fac3.reg1      0.010     1.763     +INF       .         
+fac3.reg2      0.010     0.093     +INF       .         
+fac3.reg3      0.010     1.604     +INF       .         
+fac3.reg4      0.010     1.532     +INF       .         
+fac3.reg5      0.010     1.462     +INF       .         
+fac3.reg6      0.010     1.392     +INF       .         
+fac3.reg7      0.010     1.323     +INF       .         
+fac3.reg8      0.010     1.251     +INF       .         
+fac3.reg9      0.010     1.185     +INF       .         
+fac3.reg10     0.010     1.115     +INF       .         
+fac4.reg1      0.010     1.659     +INF       .         
+fac4.reg2      0.010     0.089     +INF       .         
+fac4.reg3      0.010     1.548     +INF       .         
+fac4.reg4      0.010     1.488     +INF       .         
+fac4.reg5      0.010     1.426     +INF       .         
+fac4.reg6      0.010     1.363     +INF       .         
+fac4.reg7      0.010     1.298     +INF       .         
+fac4.reg8      0.010     1.230     +INF       .         
+fac4.reg9      0.010     1.167     +INF       .         
+fac4.reg10     0.010     1.099     +INF       .         
+fac5.reg1      0.010     1.576     +INF       .         
+fac5.reg2      0.010     0.085     +INF       .         
+fac5.reg3      0.010     1.500     +INF       .         
+fac5.reg4      0.010     1.449     +INF       .         
+fac5.reg5      0.010     1.394     +INF       .         
+fac5.reg6      0.010     1.336     +INF       .         
+fac5.reg7      0.010     1.275     +INF       .         
+fac5.reg8      0.010     1.226     +INF       .         
+fac5.reg9      0.010     1.149     +INF       .         
+fac5.reg10     0.010     1.084     +INF       .         
+
+---- VAR qe  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+fac1.com1.reg1      0.010     0.010     +INF       EPS       
+fac1.com1.reg2      0.010     2.450     +INF       .         
+fac1.com1.reg3      0.010     2.041     +INF       .         
+fac1.com1.reg4      0.010     4.017     +INF       .         
+fac1.com1.reg5      0.010     1.826     +INF       .         
+fac1.com1.reg6      0.010     2.729     +INF       .         
+fac1.com1.reg7      0.010     2.493     +INF       .         
+fac1.com1.reg8      0.010     2.500     +INF       .         
+fac1.com1.reg9      0.010     3.809     +INF       .         
+fac1.com1.reg10     0.010     3.386     +INF       .         
+fac1.com2.reg1      0.010     0.010     +INF       EPS       
+fac1.com2.reg2      0.010     0.010     +INF      1.023      
+fac1.com2.reg3      0.010     0.010     +INF       .         
+fac1.com2.reg4      0.010     0.011     +INF       .         
+fac1.com2.reg5      0.010     0.825     +INF       .         
+fac1.com2.reg6      0.010     0.354     +INF       .         
+fac1.com2.reg7      0.010     1.293     +INF       .         
+fac1.com2.reg8      0.010     1.454     +INF       .         
+fac1.com2.reg9      0.010     1.494     +INF       .         
+fac1.com2.reg10     0.010     1.348     +INF       .         
+fac1.com3.reg1      0.010     1.169     +INF       .         
+fac1.com3.reg2      0.010     0.010     +INF      1.023      
+fac1.com3.reg3      0.010     0.010     +INF       .         
+fac1.com3.reg4      0.010     0.191     +INF       .         
+fac1.com3.reg5      0.010     0.011     +INF       .         
+fac1.com3.reg6      0.010     1.561     +INF       .         
+fac1.com3.reg7      0.010     0.406     +INF       .         
+fac1.com3.reg8      0.010     1.492     +INF       .         
+fac1.com3.reg9      0.010     0.768     +INF       .         
+fac1.com3.reg10     0.010     0.803     +INF       .         
+fac1.com4.reg1      0.010     0.010     +INF       EPS       
+fac1.com4.reg2      0.010     0.010     +INF      1.023      
+fac1.com4.reg3      0.010     0.708     +INF       .         
+fac1.com4.reg4      0.010     0.260     +INF       .         
+fac1.com4.reg5      0.010     0.155     +INF       .         
+fac1.com4.reg6      0.010     0.646     +INF       .         
+fac1.com4.reg7      0.010     0.385     +INF       .         
+fac1.com4.reg8      0.010     1.248     +INF       .         
+fac1.com4.reg9      0.010     1.751     +INF       .         
+fac1.com4.reg10     0.010     1.874     +INF       .         
+fac1.com5.reg1      0.010     0.155     +INF       EPS       
+fac1.com5.reg2      0.010     0.010     +INF      1.023      
+fac1.com5.reg3      0.010     0.310     +INF       .         
+fac1.com5.reg4      0.010     0.011     +INF       .         
+fac1.com5.reg5      0.010     1.146     +INF       .         
+fac1.com5.reg6      0.010     0.011     +INF       .         
+fac1.com5.reg7      0.010     1.778     +INF       .         
+fac1.com5.reg8      0.010     0.654     +INF       .         
+fac1.com5.reg9      0.010     0.011     +INF       .         
+fac1.com5.reg10     0.010     3.077     +INF       .         
+fac1.com6.reg1      0.010     0.146     +INF       .         
+fac1.com6.reg2      0.010     0.010     +INF      1.023      
+fac1.com6.reg3      0.010     0.420     +INF       .         
+fac1.com6.reg4      0.010     0.011     +INF       .         
+fac1.com6.reg5      0.010     1.537     +INF       .         
+fac1.com6.reg6      0.010     1.198     +INF       .         
+fac1.com6.reg7      0.010     1.145     +INF       .         
+fac1.com6.reg8      0.010     1.151     +INF       .         
+fac1.com6.reg9      0.010     1.667     +INF       .         
+fac1.com6.reg10     0.010     0.011     +INF       .         
+fac2.com1.reg1      0.010     0.013     +INF       .         
+fac2.com1.reg2      0.010     2.940     +INF       .         
+fac2.com1.reg3      0.010     2.333     +INF       .         
+fac2.com1.reg4      0.010     4.463     +INF       .         
+fac2.com1.reg5      0.010     1.992     +INF       .         
+fac2.com1.reg6      0.010     2.939     +INF       .         
+fac2.com1.reg7      0.010     2.659     +INF       .         
+fac2.com1.reg8      0.010     2.648     +INF       .         
+fac2.com1.reg9      0.010     4.009     +INF       .         
+fac2.com1.reg10     0.010     3.547     +INF       .         
+fac2.com2.reg1      0.010     0.013     +INF       .         
+fac2.com2.reg2      0.010     0.012     +INF       .         
+fac2.com2.reg3      0.010     0.012     +INF       .         
+fac2.com2.reg4      0.010     0.012     +INF       .         
+fac2.com2.reg5      0.010     0.900     +INF       .         
+fac2.com2.reg6      0.010     0.381     +INF       .         
+fac2.com2.reg7      0.010     1.380     +INF       .         
+fac2.com2.reg8      0.010     1.540     +INF       .         
+fac2.com2.reg9      0.010     1.573     +INF       .         
+fac2.com2.reg10     0.010     1.412     +INF       .         
+fac2.com3.reg1      0.010     1.559     +INF       .         
+fac2.com3.reg2      0.010     0.012     +INF       .         
+fac2.com3.reg3      0.010     0.012     +INF       .         
+fac2.com3.reg4      0.010     0.212     +INF       .         
+fac2.com3.reg5      0.010     0.012     +INF       .         
+fac2.com3.reg6      0.010     1.681     +INF       .         
+fac2.com3.reg7      0.010     0.433     +INF       .         
+fac2.com3.reg8      0.010     1.580     +INF       .         
+fac2.com3.reg9      0.010     0.809     +INF       .         
+fac2.com3.reg10     0.010     0.842     +INF       .         
+fac2.com4.reg1      0.010     0.013     +INF       .         
+fac2.com4.reg2      0.010     0.012     +INF       .         
+fac2.com4.reg3      0.010     0.810     +INF       .         
+fac2.com4.reg4      0.010     0.289     +INF       .         
+fac2.com4.reg5      0.010     0.169     +INF       .         
+fac2.com4.reg6      0.010     0.696     +INF       .         
+fac2.com4.reg7      0.010     0.411     +INF       .         
+fac2.com4.reg8      0.010     1.322     +INF       .         
+fac2.com4.reg9      0.010     1.843     +INF       EPS       
+fac2.com4.reg10     0.010     1.963     +INF       .         
+fac2.com5.reg1      0.010     0.206     +INF       .         
+fac2.com5.reg2      0.010     0.012     +INF       .         
+fac2.com5.reg3      0.010     0.354     +INF       .         
+fac2.com5.reg4      0.010     0.012     +INF       .         
+fac2.com5.reg5      0.010     1.251     +INF       .         
+fac2.com5.reg6      0.010     0.012     +INF       .         
+fac2.com5.reg7      0.010     1.896     +INF       EPS       
+fac2.com5.reg8      0.010     0.692     +INF       .         
+fac2.com5.reg9      0.010     0.012     +INF       .         
+fac2.com5.reg10     0.010     3.224     +INF       .         
+fac2.com6.reg1      0.010     0.195     +INF       .         
+fac2.com6.reg2      0.010     0.012     +INF       .         
+fac2.com6.reg3      0.010     0.480     +INF       .         
+fac2.com6.reg4      0.010     0.012     +INF       .         
+fac2.com6.reg5      0.010     1.677     +INF       .         
+fac2.com6.reg6      0.010     1.291     +INF       .         
+fac2.com6.reg7      0.010     1.222     +INF       .         
+fac2.com6.reg8      0.010     1.219     +INF       .         
+fac2.com6.reg9      0.010     1.755     +INF       .         
+fac2.com6.reg10     0.010     0.012     +INF       .         
+fac3.com1.reg1      0.010     0.017     +INF       .         
+fac3.com1.reg2      0.010     3.430     +INF       .         
+fac3.com1.reg3      0.010     2.624     +INF       .         
+fac3.com1.reg4      0.010     4.909     +INF       .         
+fac3.com1.reg5      0.010     2.158     +INF       .         
+fac3.com1.reg6      0.010     3.149     +INF       .         
+fac3.com1.reg7      0.010     2.825     +INF       .         
+fac3.com1.reg8      0.010     2.795     +INF       .         
+fac3.com1.reg9      0.010     4.210     +INF       .         
+fac3.com1.reg10     0.010     3.708     +INF       .         
+fac3.com2.reg1      0.010     0.017     +INF       .         
+fac3.com2.reg2      0.010     0.014     +INF       .         
+fac3.com2.reg3      0.010     0.013     +INF       .         
+fac3.com2.reg4      0.010     0.013     +INF       .         
+fac3.com2.reg5      0.010     0.975     +INF       .         
+fac3.com2.reg6      0.010     0.408     +INF       .         
+fac3.com2.reg7      0.010     1.466     +INF       .         
+fac3.com2.reg8      0.010     1.625     +INF       .         
+fac3.com2.reg9      0.010     1.651     +INF       .         
+fac3.com2.reg10     0.010     1.477     +INF       .         
+fac3.com3.reg1      0.010     1.949     +INF       .         
+fac3.com3.reg2      0.010     0.014     +INF       .         
+fac3.com3.reg3      0.010     0.013     +INF       .         
+fac3.com3.reg4      0.010     0.233     +INF       .         
+fac3.com3.reg5      0.010     0.013     +INF       .         
+fac3.com3.reg6      0.010     1.801     +INF       EPS       
+fac3.com3.reg7      0.010     0.460     +INF       .         
+fac3.com3.reg8      0.010     1.668     +INF       .         
+fac3.com3.reg9      0.010     0.849     +INF       .         
+fac3.com3.reg10     0.010     0.880     +INF       .         
+fac3.com4.reg1      0.010     0.017     +INF       .         
+fac3.com4.reg2      0.010     0.014     +INF       .         
+fac3.com4.reg3      0.010     0.911     +INF       .         
+fac3.com4.reg4      0.010     0.318     +INF       .         
+fac3.com4.reg5      0.010     0.183     +INF       .         
+fac3.com4.reg6      0.010     0.746     +INF       .         
+fac3.com4.reg7      0.010     0.436     +INF       .         
+fac3.com4.reg8      0.010     1.395     +INF       .         
+fac3.com4.reg9      0.010     1.935     +INF       .         
+fac3.com4.reg10     0.010     2.053     +INF       .         
+fac3.com5.reg1      0.010     0.258     +INF       .         
+fac3.com5.reg2      0.010     0.014     +INF       .         
+fac3.com5.reg3      0.010     0.398     +INF       .         
+fac3.com5.reg4      0.010     0.013     +INF       .         
+fac3.com5.reg5      0.010     1.355     +INF       .         
+fac3.com5.reg6      0.010     0.013     +INF       .         
+fac3.com5.reg7      0.010     2.015     +INF       .         
+fac3.com5.reg8      0.010     0.731     +INF       .         
+fac3.com5.reg9      0.010     0.013     +INF       .         
+fac3.com5.reg10     0.010     3.370     +INF       .         
+fac3.com6.reg1      0.010     0.244     +INF       .         
+fac3.com6.reg2      0.010     0.014     +INF       .         
+fac3.com6.reg3      0.010     0.541     +INF       .         
+fac3.com6.reg4      0.010     0.013     +INF       .         
+fac3.com6.reg5      0.010     1.817     +INF       .         
+fac3.com6.reg6      0.010     1.383     +INF       .         
+fac3.com6.reg7      0.010     1.298     +INF       .         
+fac3.com6.reg8      0.010     1.287     +INF       .         
+fac3.com6.reg9      0.010     1.842     +INF       EPS       
+fac3.com6.reg10     0.010     0.012     +INF       .         
+fac4.com1.reg1      0.010     0.020     +INF       .         
+fac4.com1.reg2      0.010     3.920     +INF       .         
+fac4.com1.reg3      0.010     2.916     +INF       .         
+fac4.com1.reg4      0.010     5.356     +INF       .         
+fac4.com1.reg5      0.010     2.324     +INF       EPS       
+fac4.com1.reg6      0.010     3.359     +INF       .         
+fac4.com1.reg7      0.010     2.991     +INF       .         
+fac4.com1.reg8      0.010     2.942     +INF       .         
+fac4.com1.reg9      0.010     4.410     +INF       .         
+fac4.com1.reg10     0.010     3.870     +INF       .         
+fac4.com2.reg1      0.010     0.020     +INF       .         
+fac4.com2.reg2      0.010     0.016     +INF       .         
+fac4.com2.reg3      0.010     0.015     +INF       .         
+fac4.com2.reg4      0.010     0.014     +INF       .         
+fac4.com2.reg5      0.010     1.049     +INF       .         
+fac4.com2.reg6      0.010     0.435     +INF       .         
+fac4.com2.reg7      0.010     1.552     +INF       .         
+fac4.com2.reg8      0.010     1.711     +INF       EPS       
+fac4.com2.reg9      0.010     1.730     +INF       EPS       
+fac4.com2.reg10     0.010     1.541     +INF       .         
+fac4.com3.reg1      0.010     2.338     +INF       .         
+fac4.com3.reg2      0.010     0.016     +INF       .         
+fac4.com3.reg3      0.010     0.015     +INF       .         
+fac4.com3.reg4      0.010     0.254     +INF       .         
+fac4.com3.reg5      0.010     0.014     +INF       .         
+fac4.com3.reg6      0.010     1.921     +INF       .         
+fac4.com3.reg7      0.010     0.487     +INF       .         
+fac4.com3.reg8      0.010     1.755     +INF       EPS       
+fac4.com3.reg9      0.010     0.889     +INF       .         
+fac4.com3.reg10     0.010     0.918     +INF       .         
+fac4.com4.reg1      0.010     0.020     +INF       .         
+fac4.com4.reg2      0.010     0.016     +INF       .         
+fac4.com4.reg3      0.010     1.012     +INF       .         
+fac4.com4.reg4      0.010     0.347     +INF       .         
+fac4.com4.reg5      0.010     0.197     +INF       .         
+fac4.com4.reg6      0.010     0.796     +INF       .         
+fac4.com4.reg7      0.010     0.462     +INF       .         
+fac4.com4.reg8      0.010     1.468     +INF       .         
+fac4.com4.reg9      0.010     2.027     +INF       .         
+fac4.com4.reg10     0.010     2.142     +INF       .         
+fac4.com5.reg1      0.010     0.309     +INF       .         
+fac4.com5.reg2      0.010     0.016     +INF       .         
+fac4.com5.reg3      0.010     0.442     +INF       .         
+fac4.com5.reg4      0.010     0.014     +INF       .         
+fac4.com5.reg5      0.010     1.459     +INF       .         
+fac4.com5.reg6      0.010     0.014     +INF       .         
+fac4.com5.reg7      0.010     2.133     +INF       .         
+fac4.com5.reg8      0.010     0.769     +INF       .         
+fac4.com5.reg9      0.010     0.013     +INF       .         
+fac4.com5.reg10     0.010     3.517     +INF       .         
+fac4.com6.reg1      0.010     0.292     +INF       .         
+fac4.com6.reg2      0.010     0.016     +INF       .         
+fac4.com6.reg3      0.010     0.601     +INF       .         
+fac4.com6.reg4      0.010     0.014     +INF       .         
+fac4.com6.reg5      0.010     1.957     +INF       .         
+fac4.com6.reg6      0.010     1.475     +INF       .         
+fac4.com6.reg7      0.010     1.375     +INF       .         
+fac4.com6.reg8      0.010     1.355     +INF       .         
+fac4.com6.reg9      0.010     1.930     +INF       .         
+fac4.com6.reg10     0.010     0.013     +INF       .         
+fac5.com1.reg1      0.010     0.023     +INF       .         
+fac5.com1.reg2      0.010     4.410     +INF       .         
+fac5.com1.reg3      0.010     3.207     +INF       .         
+fac5.com1.reg4      0.010     5.802     +INF       .         
+fac5.com1.reg5      0.010     2.490     +INF       .         
+fac5.com1.reg6      0.010     3.569     +INF       .         
+fac5.com1.reg7      0.010     3.158     +INF       .         
+fac5.com1.reg8      0.010     2.968     +INF       .         
+fac5.com1.reg9      0.010     4.610     +INF       .         
+fac5.com1.reg10     0.010     4.031     +INF       .         
+fac5.com2.reg1      0.010     0.023     +INF       .         
+fac5.com2.reg2      0.010     0.018     +INF       .         
+fac5.com2.reg3      0.010     0.016     +INF       .         
+fac5.com2.reg4      0.010     0.016     +INF       .         
+fac5.com2.reg5      0.010     1.124     +INF       EPS       
+fac5.com2.reg6      0.010     0.463     +INF       .         
+fac5.com2.reg7      0.010     1.638     +INF       EPS       
+fac5.com2.reg8      0.010     1.726     +INF       .         
+fac5.com2.reg9      0.010     1.809     +INF       .         
+fac5.com2.reg10     0.010     1.605     +INF       .         
+fac5.com3.reg1      0.010     2.728     +INF       .         
+fac5.com3.reg2      0.010     0.018     +INF       .         
+fac5.com3.reg3      0.010     0.016     +INF       .         
+fac5.com3.reg4      0.010     0.276     +INF       .         
+fac5.com3.reg5      0.010     0.015     +INF       .         
+fac5.com3.reg6      0.010     2.041     +INF       .         
+fac5.com3.reg7      0.010     0.514     +INF       .         
+fac5.com3.reg8      0.010     1.771     +INF       .         
+fac5.com3.reg9      0.010     0.930     +INF       .         
+fac5.com3.reg10     0.010     0.957     +INF       EPS       
+fac5.com4.reg1      0.010     0.023     +INF       .         
+fac5.com4.reg2      0.010     0.018     +INF       .         
+fac5.com4.reg3      0.010     1.113     +INF       EPS       
+fac5.com4.reg4      0.010     0.376     +INF       .         
+fac5.com4.reg5      0.010     0.211     +INF       .         
+fac5.com4.reg6      0.010     0.845     +INF       EPS       
+fac5.com4.reg7      0.010     0.488     +INF       .         
+fac5.com4.reg8      0.010     1.482     +INF       .         
+fac5.com4.reg9      0.010     2.120     +INF       .         
+fac5.com4.reg10     0.010     2.231     +INF       .         
+fac5.com5.reg1      0.010     0.361     +INF       .         
+fac5.com5.reg2      0.010     0.018     +INF       .         
+fac5.com5.reg3      0.010     0.486     +INF       .         
+fac5.com5.reg4      0.010     0.016     +INF       .         
+fac5.com5.reg5      0.010     1.563     +INF       EPS       
+fac5.com5.reg6      0.010     0.015     +INF       .         
+fac5.com5.reg7      0.010     2.252     +INF       .         
+fac5.com5.reg8      0.010     0.776     +INF       EPS       
+fac5.com5.reg9      0.010     0.014     +INF       .         
+fac5.com5.reg10     0.010     3.663     +INF       .         
+fac5.com6.reg1      0.010     0.341     +INF       EPS       
+fac5.com6.reg2      0.010     0.018     +INF       .         
+fac5.com6.reg3      0.010     0.661     +INF       EPS       
+fac5.com6.reg4      0.010     0.016     +INF       .         
+fac5.com6.reg5      0.010     2.097     +INF       .         
+fac5.com6.reg6      0.010     1.567     +INF       EPS       
+fac5.com6.reg7      0.010     1.451     +INF       .         
+fac5.com6.reg8      0.010     1.367     +INF       .         
+fac5.com6.reg9      0.010     2.018     +INF       .         
+fac5.com6.reg10     0.010     0.014     +INF       .         
+
+---- VAR y  
+
+         LOWER     LEVEL     UPPER    MARGINAL
+
+reg1      0.010    19.350     +INF       .         
+reg2      0.010     1.467     +INF       .         
+reg3      0.010    34.040     +INF       .         
+reg4      0.010    41.698     +INF       .         
+reg5      0.010    49.571     +INF       .         
+reg6      0.010    57.662     +INF       .         
+reg7      0.010    65.972     +INF       .         
+reg8      0.010    74.507     +INF       .         
+reg9      0.010    83.260     +INF       .         
+reg10     0.010    92.240     +INF       .         
+
+---- VAR qet  
+
+              LOWER     LEVEL     UPPER    MARGINAL
+
+fac1.reg1      1.500     1.500     1.500      EPS       
+fac1.reg2      2.500     2.500     2.500      EPS       
+fac1.reg3      3.500     3.500     3.500      EPS       
+fac1.reg4      4.500     4.500     4.500      EPS       
+fac1.reg5      5.500     5.500     5.500      EPS       
+fac1.reg6      6.500     6.500     6.500      EPS       
+fac1.reg7      7.500     7.500     7.500      EPS       
+fac1.reg8      8.500     8.500     8.500      EPS       
+fac1.reg9      9.500     9.500     9.500      EPS       
+fac1.reg10    10.500    10.500    10.500      EPS       
+fac2.reg1      2.000     2.000     2.000      EPS       
+fac2.reg2      3.000     3.000     3.000      EPS       
+fac2.reg3      4.000     4.000     4.000      EPS       
+fac2.reg4      5.000     5.000     5.000      EPS       
+fac2.reg5      6.000     6.000     6.000      EPS       
+fac2.reg6      7.000     7.000     7.000      EPS       
+fac2.reg7      8.000     8.000     8.000      EPS       
+fac2.reg8      9.000     9.000     9.000      EPS       
+fac2.reg9     10.000    10.000    10.000      EPS       
+fac2.reg10    11.000    11.000    11.000      EPS       
+fac3.reg1      2.500     2.500     2.500      EPS       
+fac3.reg2      3.500     3.500     3.500      EPS       
+fac3.reg3      4.500     4.500     4.500      EPS       
+fac3.reg4      5.500     5.500     5.500      EPS       
+fac3.reg5      6.500     6.500     6.500      EPS       
+fac3.reg6      7.500     7.500     7.500      EPS       
+fac3.reg7      8.500     8.500     8.500      EPS       
+fac3.reg8      9.500     9.500     9.500      EPS       
+fac3.reg9     10.500    10.500    10.500      EPS       
+fac3.reg10    11.500    11.500    11.500      EPS       
+fac4.reg1      3.000     3.000     3.000      EPS       
+fac4.reg2      4.000     4.000     4.000      EPS       
+fac4.reg3      5.000     5.000     5.000      EPS       
+fac4.reg4      6.000     6.000     6.000      EPS       
+fac4.reg5      7.000     7.000     7.000      EPS       
+fac4.reg6      8.000     8.000     8.000      EPS       
+fac4.reg7      9.000     9.000     9.000      EPS       
+fac4.reg8     10.000    10.000    10.000      EPS       
+fac4.reg9     11.000    11.000    11.000      EPS       
+fac4.reg10    12.000    12.000    12.000      EPS       
+fac5.reg1      3.500     3.500     3.500      EPS       
+fac5.reg2      4.500     4.500     4.500      EPS       
+fac5.reg3      5.500     5.500     5.500      EPS       
+fac5.reg4      6.500     6.500     6.500      EPS       
+fac5.reg5      7.500     7.500     7.500      EPS       
+fac5.reg6      8.500     8.500     8.500      EPS       
+fac5.reg7      9.500     9.500     9.500      EPS       
+fac5.reg8     10.500    10.500    10.500      EPS       
+fac5.reg9     11.500    11.500    11.500      EPS       
+fac5.reg10    12.500    12.500    12.500      EPS       
+
+---- VAR c  
+
+              LOWER     LEVEL     UPPER    MARGINAL
+
+com1.reg1      0.010    10.000     +INF       .         
+com1.reg2      0.010     1.449     +INF       .         
+com1.reg3      0.010    10.000     +INF       .         
+com1.reg4      0.010    10.000     +INF       .         
+com1.reg5      0.010    10.000     +INF       .         
+com1.reg6      0.010    10.000     +INF       .         
+com1.reg7      0.010    10.000     +INF       .         
+com1.reg8      0.010    10.000     +INF       .         
+com1.reg9      0.010    10.000     +INF       .         
+com1.reg10     0.010    10.000     +INF       .         
+com2.reg1      0.010    10.000     +INF       .         
+com2.reg2      0.010     0.552     +INF       .         
+com2.reg3      0.010    10.000     +INF       .         
+com2.reg4      0.010    10.000     +INF       .         
+com2.reg5      0.010    10.000     +INF       .         
+com2.reg6      0.010    10.000     +INF       .         
+com2.reg7      0.010    10.000     +INF       .         
+com2.reg8      0.010    10.000     +INF       .         
+com2.reg9      0.010    10.000     +INF       .         
+com2.reg10     0.010    10.000     +INF       .         
+com3.reg1      0.010    10.000     +INF       .         
+com3.reg2      0.010     0.552     +INF       .         
+com3.reg3      0.010    10.000     +INF       .         
+com3.reg4      0.010    10.000     +INF       .         
+com3.reg5      0.010    10.000     +INF       .         
+com3.reg6      0.010    10.000     +INF       .         
+com3.reg7      0.010    10.000     +INF       .         
+com3.reg8      0.010    10.000     +INF       .         
+com3.reg9      0.010    10.000     +INF       .         
+com3.reg10     0.010    10.000     +INF       .         
+com4.reg1      0.010    10.000     +INF       .         
+com4.reg2      0.010     0.552     +INF       .         
+com4.reg3      0.010    10.000     +INF       .         
+com4.reg4      0.010    10.000     +INF       .         
+com4.reg5      0.010    10.000     +INF       .         
+com4.reg6      0.010    10.000     +INF       .         
+com4.reg7      0.010    10.000     +INF       .         
+com4.reg8      0.010    10.000     +INF       .         
+com4.reg9      0.010    10.000     +INF       .         
+com4.reg10     0.010    10.000     +INF       .         
+com5.reg1      0.010    10.000     +INF       .         
+com5.reg2      0.010     0.552     +INF       .         
+com5.reg3      0.010    10.000     +INF       .         
+com5.reg4      0.010    10.000     +INF       .         
+com5.reg5      0.010    10.000     +INF       .         
+com5.reg6      0.010    10.000     +INF       .         
+com5.reg7      0.010    10.000     +INF       .         
+com5.reg8      0.010    10.000     +INF       .         
+com5.reg9      0.010    10.000     +INF       .         
+com5.reg10     0.010    10.000     +INF       .         
+com6.reg1      0.010    10.000     +INF       .         
+com6.reg2      0.010     0.552     +INF       .         
+com6.reg3      0.010    10.000     +INF       .         
+com6.reg4      0.010    10.000     +INF       .         
+com6.reg5      0.010    10.000     +INF       .         
+com6.reg6      0.010    10.000     +INF       .         
+com6.reg7      0.010    10.000     +INF       .         
+com6.reg8      0.010    10.000     +INF       .         
+com6.reg9      0.010    10.000     +INF       .         
+com6.reg10     0.010    10.000     +INF       .         
+
+                       LOWER     LEVEL     UPPER    MARGINAL
+
+---- VAR dum            -INF       .        +INF       .         
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             7 INFEASIBLE (INFES)
+                    SUM      1.810
+                    MAX      0.897
+                    MEAN     0.259
+                             0  UNBOUNDED
+                             0     ERRORS
+                            35  PROJECTED
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 19:35:25 Page 6
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE m2 Using CNS From line 203
+
+
+---- eq_c  =E=  
+
+eq_c(com1,reg2)..  - (0.940114075807199)*pe(fac1,reg2)
+     
+      - (1.12813689096864)*pe(fac2,reg2) - (1.31615970613008)*pe(fac3,reg2)
+     
+      - (1.50418252129152)*pe(fac4,reg2) - (1.69220533645296)*pe(fac5,reg2)
+     
+      + c(com1,reg2) =E= 0 ;
+     
+      (LHS = 0.897398324877854, INFES = 0.897398324877854 ****)
+     
+eq_c(com1,reg3)..  - (1.02821393581221)*pe(fac1,reg3)
+     
+      - (1.17510164092824)*pe(fac2,reg3) - (1.32198934604427)*pe(fac3,reg3)
+     
+      - (1.4688770511603)*pe(fac4,reg3) - (1.61576475627633)*pe(fac5,reg3)
+     
+      + c(com1,reg3) =E= 0 ; (LHS = 0)
+     
+eq_c(com1,reg4)..  - (1.07918891116)*pe(fac1,reg4)
+     
+      - (1.19909879017777)*pe(fac2,reg4) - (1.31900866919555)*pe(fac3,reg4)
+     
+      - (1.43891854821333)*pe(fac4,reg4) - (1.55882842723111)*pe(fac5,reg4)
+     
+      + c(com1,reg4) =E= 0 ; (LHS = 0)
+     
+REMAINING 56 ENTRIES SKIPPED
+
+
+---- eq_demand  =E=  
+
+eq_demand(com1,reg1)..  (0.0113102524702819)*p(com1) + (3E-5)*p(com2)
+     
+      + (4.5E-5)*p(com3) + (6E-5)*p(com4) + (7.5E-5)*p(com5) + (9E-5)*p(com6)
+     
+      + qp(com1,reg1) - (0.006)*y(reg1) =E= 0.0025 ; (LHS = 0.00249999999999997)
+     
+eq_demand(com1,reg2)..  (0.00056)*p(com1) + (0.00012)*p(com2)
+     
+      + (0.00018)*p(com3) + (0.00024)*p(com4) + (0.0003)*p(com5)
+     
+      + (0.00036)*p(com6) + qp(com1,reg2) - (0.012)*y(reg2) =E= 0.005 ;
+     
+      (LHS = 0.00500000000000001)
+     
+eq_demand(com1,reg3)..  (0.0585712955988434)*p(com1) + (0.00027)*p(com2)
+     
+      + (0.000405)*p(com3) + (0.00054)*p(com4) + (0.000675)*p(com5)
+     
+      + (0.00081)*p(com6) + qp(com1,reg3) - (0.018)*y(reg3) =E= 0.0075 ;
+     
+      (LHS = 0.0075)
+     
+REMAINING 57 ENTRIES SKIPPED
+
+
+---- eq_market_clear  =E=  
+
+eq_market_clear(com1)..  qp(com1,reg1) + qp(com1,reg2) + qp(com1,reg3)
+     
+      + qp(com1,reg4) + qp(com1,reg5) + qp(com1,reg6) + qp(com1,reg7)
+     
+      + qp(com1,reg8) + qp(com1,reg9) + qp(com1,reg10) - qs(com1,reg1)
+     
+      - qs(com1,reg2) - qs(com1,reg3) - qs(com1,reg4) - qs(com1,reg5)
+     
+      - qs(com1,reg6) - qs(com1,reg7) - qs(com1,reg8) - qs(com1,reg9)
+     
+      - qs(com1,reg10) =E= 0 ; (LHS = 0)
+     
+eq_market_clear(com2)..  qp(com2,reg1) + qp(com2,reg2) + qp(com2,reg3)
+     
+      + qp(com2,reg4) + qp(com2,reg5) + qp(com2,reg6) + qp(com2,reg7)
+     
+      + qp(com2,reg8) + qp(com2,reg9) + qp(com2,reg10) - qs(com2,reg1)
+     
+      - qs(com2,reg2) - qs(com2,reg3) - qs(com2,reg4) - qs(com2,reg5)
+     
+      - qs(com2,reg6) - qs(com2,reg7) - qs(com2,reg8) - qs(com2,reg9)
+     
+      - qs(com2,reg10) =E= 0 ; (LHS = 0)
+     
+eq_market_clear(com3)..  qp(com3,reg1) + qp(com3,reg2) + qp(com3,reg3)
+     
+      + qp(com3,reg4) + qp(com3,reg5) + qp(com3,reg6) + qp(com3,reg7)
+     
+      + qp(com3,reg8) + qp(com3,reg9) + qp(com3,reg10) - qs(com3,reg1)
+     
+      - qs(com3,reg2) - qs(com3,reg3) - qs(com3,reg4) - qs(com3,reg5)
+     
+      - qs(com3,reg6) - qs(com3,reg7) - qs(com3,reg8) - qs(com3,reg9)
+     
+      - qs(com3,reg10) =E= 0 ; (LHS = 0)
+     
+REMAINING 3 ENTRIES SKIPPED
+
+
+---- eq_factor_demand  =E=  
+
+eq_factor_demand(com1,reg1,fac1)..  - (0.775183220721649)*qs(com1,reg1)
+     
+      + (0.0688961386112674)*pe(fac1,reg1) + qe(fac1,com1,reg1)
+     
+      - (0.00299999192235157)*c(com1,reg1) =E= 0 ;
+     
+      (LHS = -7.55835498356117E-11, INFES = 7.55835498356117E-11 ****)
+     
+eq_factor_demand(com1,reg1,fac2)..  - (1.03357762762887)*qs(com1,reg1)
+     
+      + (0.0210638923540894)*pe(fac2,reg1) + qe(fac2,com1,reg1)
+     
+      - (0.0039999892298021)*c(com1,reg1) =E= 0 ;
+     
+      (LHS = -1.00778068182206E-10, INFES = 1.00778068182206E-10 ****)
+     
+eq_factor_demand(com1,reg1,fac3)..  - (1.29197203453608)*qs(com1,reg1)
+     
+      + (0.0283629877467172)*pe(fac3,reg1) + qe(fac3,com1,reg1)
+     
+      - (0.00499998653725262)*c(com1,reg1) =E= 0 ;
+     
+      (LHS = -1.259725865288E-10, INFES = 1.259725865288E-10 ****)
+     
+REMAINING 297 ENTRIES SKIPPED
+
+
+---- eq_income  =E=  
+
+eq_income(reg1)..  (1.5)*pe(fac1,reg1) + (2)*pe(fac2,reg1) + (2.5)*pe(fac3,reg1)
+     
+      + (3)*pe(fac4,reg1) + (3.5)*pe(fac5,reg1) - y(reg1)
+     
+      + (0.435438049670964)*qet(fac1,reg1) + (1.89898427270345)*qet(fac2,reg1)
+     
+      + (1.76286083907733)*qet(fac3,reg1) + (1.65891556347521)*qet(fac4,reg1)
+     
+      + (1.57582753593452)*qet(fac5,reg1) =E= 0 ; (LHS = 0)
+     
+eq_income(reg2)..  (2.5)*pe(fac1,reg2) + (3)*pe(fac2,reg2) + (3.5)*pe(fac3,reg2)
+     
+      + (4)*pe(fac4,reg2) + (4.5)*pe(fac5,reg2) - y(reg2)
+     
+      + (0.0450403514033612)*qet(fac1,reg2)
+     
+      + (0.0974845648752577)*qet(fac2,reg2)
+     
+      + (0.0926019774853493)*qet(fac3,reg2)
+     
+      + (0.0885706051590557)*qet(fac4,reg2)
+     
+      + (0.0851606114883435)*qet(fac5,reg2) =E= 0 ; (LHS = 0)
+     
+eq_income(reg3)..  (3.5)*pe(fac1,reg3) + (4)*pe(fac2,reg3) + (4.5)*pe(fac3,reg3)
+     
+      + (5)*pe(fac4,reg3) + (5.5)*pe(fac5,reg3) - y(reg3)
+     
+      + (1.1889221480606)*qet(fac1,reg3) + (1.66783925067016)*qet(fac2,reg3)
+     
+      + (1.60362696174725)*qet(fac3,reg3) + (1.54828480843434)*qet(fac4,reg3)
+     
+      + (1.49986886819946)*qet(fac5,reg3) =E= 0 ; (LHS = 0)
+     
+REMAINING 7 ENTRIES SKIPPED
+
+
+---- eq_factor_clear  =E=  
+
+eq_factor_clear(fac1,reg1)..  qe(fac1,com1,reg1) + qe(fac1,com2,reg1)
+     
+      + qe(fac1,com3,reg1) + qe(fac1,com4,reg1) + qe(fac1,com5,reg1)
+     
+      + qe(fac1,com6,reg1) - qet(fac1,reg1) =E= 0 ; (LHS = 0)
+     
+eq_factor_clear(fac1,reg2)..  qe(fac1,com1,reg2) + qe(fac1,com2,reg2)
+     
+      + qe(fac1,com3,reg2) + qe(fac1,com4,reg2) + qe(fac1,com5,reg2)
+     
+      + qe(fac1,com6,reg2) - qet(fac1,reg2) =E= 0 ; (LHS = 0)
+     
+eq_factor_clear(fac1,reg3)..  qe(fac1,com1,reg3) + qe(fac1,com2,reg3)
+     
+      + qe(fac1,com3,reg3) + qe(fac1,com4,reg3) + qe(fac1,com5,reg3)
+     
+      + qe(fac1,com6,reg3) - qet(fac1,reg3) =E= 0 ; (LHS = 0)
+     
+REMAINING 47 ENTRIES SKIPPED
+
+
+---- eq_zero_profits  =E=  
+
+eq_zero_profits(com1,reg1)..  - (0.0129001761238771)*p(com1)
+     
+      - (10)*qs(com1,reg1) + (0.01)*pe(fac1,reg1)
+     
+      + (0.0133333333333333)*pe(fac2,reg1) + (0.0166666666666667)*pe(fac3,reg1)
+     
+      + (0.02)*pe(fac4,reg1) + (0.0233333333333333)*pe(fac5,reg1)
+     
+      + (0.435438049670964)*qe(fac1,com1,reg1)
+     
+      + (1.89898427270345)*qe(fac2,com1,reg1)
+     
+      + (1.76286083907733)*qe(fac3,com1,reg1)
+     
+      + (1.65891556347521)*qe(fac4,com1,reg1)
+     
+      + (1.57582753593452)*qe(fac5,com1,reg1) =E= 0 ;
+     
+      (LHS = 1.04398658332117E-6, INFES = 1.04398658332117E-6 ****)
+     
+eq_zero_profits(com1,reg2)..  - (0.143733333333333)*p(com1) - (10)*qs(com1,reg2)
+     
+      + (2.45)*pe(fac1,reg2) + (2.94)*pe(fac2,reg2) + (3.43)*pe(fac3,reg2)
+     
+      + (3.92)*pe(fac4,reg2) + (4.41)*pe(fac5,reg2)
+     
+      + (0.0450403514033612)*qe(fac1,com1,reg2)
+     
+      + (0.0974845648752577)*qe(fac2,com1,reg2)
+     
+      + (0.0926019774853493)*qe(fac3,com1,reg2)
+     
+      + (0.0885706051590557)*qe(fac4,com1,reg2)
+     
+      + (0.0851606114883435)*qe(fac5,com1,reg2) =E= 0 ; (LHS = 0)
+     
+eq_zero_profits(com1,reg3)..  - (1.98509675990259)*p(com1) - (10)*qs(com1,reg3)
+     
+      + (2.04110415246751)*pe(fac1,reg3) + (2.33269045996287)*pe(fac2,reg3)
+     
+      + (2.62427676745822)*pe(fac3,reg3) + (2.91586307495358)*pe(fac4,reg3)
+     
+      + (3.20744938244894)*pe(fac5,reg3) + (1.1889221480606)*qe(fac1,com1,reg3)
+     
+      + (1.66783925067016)*qe(fac2,com1,reg3)
+     
+      + (1.60362696174725)*qe(fac3,com1,reg3)
+     
+      + (1.54828480843434)*qe(fac4,com1,reg3)
+     
+      + (1.49986886819946)*qe(fac5,com1,reg3) =E= 0 ; (LHS = 0)
+     
+REMAINING 57 ENTRIES SKIPPED
+
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 19:35:25 Page 7
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE m2 Using CNS From line 203
+
+
+---- p  
+
+p(com1)
+                (.LO, .L, .UP, .M = 10, 10, 10, EPS)
+       (0.0113) eq_demand(com1,reg1)
+       (0.0006) eq_demand(com1,reg2)
+       (0.0586) eq_demand(com1,reg3)
+       (0.0953) eq_demand(com1,reg4)
+       (0.1412) eq_demand(com1,reg5)
+       (0.1968) eq_demand(com1,reg6)
+       (0.2624) eq_demand(com1,reg7)
+       (0.3384) eq_demand(com1,reg8)
+       (0.4253) eq_demand(com1,reg9)
+       (0.5234) eq_demand(com1,reg10)
+ (4.7000000E-5) eq_demand(com2,reg1)
+ (8.8000000E-5) eq_demand(com2,reg2)
+       (0.0001) eq_demand(com2,reg3)
+       (0.0002) eq_demand(com2,reg4)
+       (0.0002) eq_demand(com2,reg5)
+       (0.0002) eq_demand(com2,reg6)
+       (0.0002) eq_demand(com2,reg7)
+       (0.0002) eq_demand(com2,reg8)
+       (0.0002) eq_demand(com2,reg9)
+       (0.0002) eq_demand(com2,reg10)
+ (4.7000000E-5) eq_demand(com3,reg1)
+ (8.8000000E-5) eq_demand(com3,reg2)
+       (0.0001) eq_demand(com3,reg3)
+       (0.0002) eq_demand(com3,reg4)
+       (0.0002) eq_demand(com3,reg5)
+       (0.0002) eq_demand(com3,reg6)
+       (0.0002) eq_demand(com3,reg7)
+       (0.0002) eq_demand(com3,reg8)
+       (0.0002) eq_demand(com3,reg9)
+       (0.0002) eq_demand(com3,reg10)
+ (4.7000000E-5) eq_demand(com4,reg1)
+ (8.8000000E-5) eq_demand(com4,reg2)
+       (0.0001) eq_demand(com4,reg3)
+       (0.0002) eq_demand(com4,reg4)
+       (0.0002) eq_demand(com4,reg5)
+       (0.0002) eq_demand(com4,reg6)
+       (0.0002) eq_demand(com4,reg7)
+       (0.0002) eq_demand(com4,reg8)
+       (0.0002) eq_demand(com4,reg9)
+       (0.0002) eq_demand(com4,reg10)
+ (4.7000000E-5) eq_demand(com5,reg1)
+ (8.8000000E-5) eq_demand(com5,reg2)
+       (0.0001) eq_demand(com5,reg3)
+       (0.0002) eq_demand(com5,reg4)
+       (0.0002) eq_demand(com5,reg5)
+       (0.0002) eq_demand(com5,reg6)
+       (0.0002) eq_demand(com5,reg7)
+       (0.0002) eq_demand(com5,reg8)
+       (0.0002) eq_demand(com5,reg9)
+       (0.0002) eq_demand(com5,reg10)
+ (4.7000000E-5) eq_demand(com6,reg1)
+ (8.8000000E-5) eq_demand(com6,reg2)
+       (0.0001) eq_demand(com6,reg3)
+       (0.0002) eq_demand(com6,reg4)
+       (0.0002) eq_demand(com6,reg5)
+       (0.0002) eq_demand(com6,reg6)
+       (0.0002) eq_demand(com6,reg7)
+       (0.0002) eq_demand(com6,reg8)
+       (0.0002) eq_demand(com6,reg9)
+       (0.0002) eq_demand(com6,reg10)
+      (-0.0129) eq_zero_profits(com1,reg1)
+      (-0.1437) eq_zero_profits(com1,reg2)
+      (-1.9851) eq_zero_profits(com1,reg3)
+      (-3.722)  eq_zero_profits(com1,reg4)
+      (-1.6455) eq_zero_profits(com1,reg5)
+      (-2.4211) eq_zero_profits(com1,reg6)
+      (-2.1928) eq_zero_profits(com1,reg7)
+      (-2.177)  eq_zero_profits(com1,reg8)
+      (-3.338)  eq_zero_profits(com1,reg9)
+      (-2.9744) eq_zero_profits(com1,reg10)
+
+p(com2)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+ (3.0000000E-5) eq_demand(com1,reg1)
+       (0.0001) eq_demand(com1,reg2)
+       (0.0003) eq_demand(com1,reg3)
+       (0.0005) eq_demand(com1,reg4)
+       (0.0007) eq_demand(com1,reg5)
+       (0.0011) eq_demand(com1,reg6)
+       (0.0015) eq_demand(com1,reg7)
+       (0.0019) eq_demand(com1,reg8)
+       (0.0024) eq_demand(com1,reg9)
+       (0.003)  eq_demand(com1,reg10)
+       (0.0355) eq_demand(com2,reg1)
+       (0.0009) eq_demand(com2,reg2)
+       (0.0535) eq_demand(com2,reg3)
+       (0.0605) eq_demand(com2,reg4)
+       (0.0661) eq_demand(com2,reg5)
+       (0.0702) eq_demand(com2,reg6)
+       (0.0727) eq_demand(com2,reg7)
+       (0.0735) eq_demand(com2,reg8)
+       (0.0727) eq_demand(com2,reg9)
+       (0.07)   eq_demand(com2,reg10)
+ (9.4000000E-5) eq_demand(com3,reg1)
+       (0.0002) eq_demand(com3,reg2)
+       (0.0002) eq_demand(com3,reg3)
+       (0.0003) eq_demand(com3,reg4)
+       (0.0003) eq_demand(com3,reg5)
+       (0.0004) eq_demand(com3,reg6)
+       (0.0004) eq_demand(com3,reg7)
+       (0.0004) eq_demand(com3,reg8)
+       (0.0004) eq_demand(com3,reg9)
+       (0.0004) eq_demand(com3,reg10)
+ (9.4000000E-5) eq_demand(com4,reg1)
+       (0.0002) eq_demand(com4,reg2)
+       (0.0002) eq_demand(com4,reg3)
+       (0.0003) eq_demand(com4,reg4)
+       (0.0003) eq_demand(com4,reg5)
+       (0.0004) eq_demand(com4,reg6)
+       (0.0004) eq_demand(com4,reg7)
+       (0.0004) eq_demand(com4,reg8)
+       (0.0004) eq_demand(com4,reg9)
+       (0.0004) eq_demand(com4,reg10)
+ (9.4000000E-5) eq_demand(com5,reg1)
+       (0.0002) eq_demand(com5,reg2)
+       (0.0002) eq_demand(com5,reg3)
+       (0.0003) eq_demand(com5,reg4)
+       (0.0003) eq_demand(com5,reg5)
+       (0.0004) eq_demand(com5,reg6)
+       (0.0004) eq_demand(com5,reg7)
+       (0.0004) eq_demand(com5,reg8)
+       (0.0004) eq_demand(com5,reg9)
+       (0.0004) eq_demand(com5,reg10)
+ (9.4000000E-5) eq_demand(com6,reg1)
+       (0.0002) eq_demand(com6,reg2)
+       (0.0002) eq_demand(com6,reg3)
+       (0.0003) eq_demand(com6,reg4)
+       (0.0003) eq_demand(com6,reg5)
+       (0.0004) eq_demand(com6,reg6)
+       (0.0004) eq_demand(com6,reg7)
+       (0.0004) eq_demand(com6,reg8)
+       (0.0004) eq_demand(com6,reg9)
+       (0.0004) eq_demand(com6,reg10)
+      (-0.0129) eq_zero_profits(com2,reg1)
+      (-0.0106) eq_zero_profits(com2,reg2)
+      (-0.01)   eq_zero_profits(com2,reg3)
+      (-0.01)   eq_zero_profits(com2,reg4)
+      (-0.7432) eq_zero_profits(com2,reg5)
+      (-0.3138) eq_zero_profits(com2,reg6)
+      (-1.1376) eq_zero_profits(com2,reg7)
+      (-1.266)  eq_zero_profits(com2,reg8)
+      (-1.3094) eq_zero_profits(com2,reg9)
+      (-1.1843) eq_zero_profits(com2,reg10)
+
+p(com3)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+ (4.5000000E-5) eq_demand(com1,reg1)
+       (0.0002) eq_demand(com1,reg2)
+       (0.0004) eq_demand(com1,reg3)
+       (0.0007) eq_demand(com1,reg4)
+       (0.0011) eq_demand(com1,reg5)
+       (0.0016) eq_demand(com1,reg6)
+       (0.0022) eq_demand(com1,reg7)
+       (0.0029) eq_demand(com1,reg8)
+       (0.0036) eq_demand(com1,reg9)
+       (0.0045) eq_demand(com1,reg10)
+       (0.0001) eq_demand(com2,reg1)
+       (0.0003) eq_demand(com2,reg2)
+       (0.0004) eq_demand(com2,reg3)
+       (0.0005) eq_demand(com2,reg4)
+       (0.0005) eq_demand(com2,reg5)
+       (0.0006) eq_demand(com2,reg6)
+       (0.0006) eq_demand(com2,reg7)
+       (0.0006) eq_demand(com2,reg8)
+       (0.0006) eq_demand(com2,reg9)
+       (0.0006) eq_demand(com2,reg10)
+       (0.0355) eq_demand(com3,reg1)
+       (0.001)  eq_demand(com3,reg2)
+       (0.0536) eq_demand(com3,reg3)
+       (0.0606) eq_demand(com3,reg4)
+       (0.0662) eq_demand(com3,reg5)
+       (0.0704) eq_demand(com3,reg6)
+       (0.0729) eq_demand(com3,reg7)
+       (0.0737) eq_demand(com3,reg8)
+       (0.0729) eq_demand(com3,reg9)
+       (0.0702) eq_demand(com3,reg10)
+       (0.0001) eq_demand(com4,reg1)
+       (0.0003) eq_demand(com4,reg2)
+       (0.0004) eq_demand(com4,reg3)
+       (0.0005) eq_demand(com4,reg4)
+       (0.0005) eq_demand(com4,reg5)
+       (0.0006) eq_demand(com4,reg6)
+       (0.0006) eq_demand(com4,reg7)
+       (0.0006) eq_demand(com4,reg8)
+       (0.0006) eq_demand(com4,reg9)
+       (0.0006) eq_demand(com4,reg10)
+       (0.0001) eq_demand(com5,reg1)
+       (0.0003) eq_demand(com5,reg2)
+       (0.0004) eq_demand(com5,reg3)
+       (0.0005) eq_demand(com5,reg4)
+       (0.0005) eq_demand(com5,reg5)
+       (0.0006) eq_demand(com5,reg6)
+       (0.0006) eq_demand(com5,reg7)
+       (0.0006) eq_demand(com5,reg8)
+       (0.0006) eq_demand(com5,reg9)
+       (0.0006) eq_demand(com5,reg10)
+       (0.0001) eq_demand(com6,reg1)
+       (0.0003) eq_demand(com6,reg2)
+       (0.0004) eq_demand(com6,reg3)
+       (0.0005) eq_demand(com6,reg4)
+       (0.0005) eq_demand(com6,reg5)
+       (0.0006) eq_demand(com6,reg6)
+       (0.0006) eq_demand(com6,reg7)
+       (0.0006) eq_demand(com6,reg8)
+       (0.0006) eq_demand(com6,reg9)
+       (0.0006) eq_demand(com6,reg10)
+      (-1.5083) eq_zero_profits(com3,reg1)
+      (-0.0106) eq_zero_profits(com3,reg2)
+      (-0.01)   eq_zero_profits(com3,reg3)
+      (-0.1768) eq_zero_profits(com3,reg4)
+      (-0.01)   eq_zero_profits(com3,reg5)
+      (-1.3846) eq_zero_profits(com3,reg6)
+      (-0.3569) eq_zero_profits(com3,reg7)
+      (-1.2991) eq_zero_profits(com3,reg8)
+      (-0.6732) eq_zero_profits(com3,reg9)
+      (-0.7058) eq_zero_profits(com3,reg10)
+
+REMAINING 3 ENTRIES SKIPPED
+
+---- qp  
+
+qp(com1,reg1)
+                (.LO, .L, .UP, .M = 0.01, 0.115452524702819, +INF, 0)
+        1       eq_demand(com1,reg1)
+        1       eq_market_clear(com1)
+
+qp(com1,reg2)
+                (.LO, .L, .UP, .M = 0.01, 0.01, +INF, 0.0143599720859018)
+        1       eq_demand(com1,reg2)
+        1       eq_market_clear(com1)
+
+qp(com1,reg3)
+                (.LO, .L, .UP, .M = 0.01, 0.591862955988434, +INF, 0)
+        1       eq_demand(com1,reg3)
+        1       eq_market_clear(com1)
+
+REMAINING 57 ENTRIES SKIPPED
+
+---- qs  
+
+qs(com1,reg1)
+                (.LO, .L, .UP, .M = 0.01, 0.0129001761238771, +INF, 0)
+       -1       eq_market_clear(com1)
+      (-0.7752) eq_factor_demand(com1,reg1,fac1)
+      (-1.0336) eq_factor_demand(com1,reg1,fac2)
+      (-1.292)  eq_factor_demand(com1,reg1,fac3)
+      (-1.5504) eq_factor_demand(com1,reg1,fac4)
+      (-1.8088) eq_factor_demand(com1,reg1,fac5)
+     (-10)      eq_zero_profits(com1,reg1)
+
+qs(com1,reg2)
+                (.LO, .L, .UP, .M = 0.01, 0.143733333333333, +INF, 0)
+       -1       eq_market_clear(com1)
+     (-17.0455) eq_factor_demand(com1,reg2,fac1)
+     (-20.4545) eq_factor_demand(com1,reg2,fac2)
+     (-23.8636) eq_factor_demand(com1,reg2,fac3)
+     (-27.2727) eq_factor_demand(com1,reg2,fac4)
+     (-30.6818) eq_factor_demand(com1,reg2,fac5)
+     (-10)      eq_zero_profits(com1,reg2)
+
+qs(com1,reg3)
+                (.LO, .L, .UP, .M = 0.01, 1.98509675990259, +INF, 0)
+       -1       eq_market_clear(com1)
+      (-1.0282) eq_factor_demand(com1,reg3,fac1)
+      (-1.1751) eq_factor_demand(com1,reg3,fac2)
+      (-1.322)  eq_factor_demand(com1,reg3,fac3)
+      (-1.4689) eq_factor_demand(com1,reg3,fac4)
+      (-1.6158) eq_factor_demand(com1,reg3,fac5)
+     (-10)      eq_zero_profits(com1,reg3)
+
+REMAINING 57 ENTRIES SKIPPED
+
+---- pe  
+
+pe(fac1,reg1)
+                (.LO, .L, .UP, .M = 0.01, 0.435438049670964, +INF, 0)
+      (-0.7752) eq_c(com2,reg1)
+      (-0.7752) eq_c(com3,reg1)
+      (-0.7752) eq_c(com4,reg1)
+      (-0.7752) eq_c(com5,reg1)
+      (-0.7752) eq_c(com6,reg1)
+       (0.0689) eq_factor_demand(com1,reg1,fac1)
+       (0.0689) eq_factor_demand(com2,reg1,fac1)
+       (8.0554) eq_factor_demand(com3,reg1,fac1)
+       (0.0689) eq_factor_demand(com4,reg1,fac1)
+       (1.0655) eq_factor_demand(com5,reg1,fac1)
+       (1.0069) eq_factor_demand(com6,reg1,fac1)
+       (1.5)    eq_income(reg1)
+       (0.01)   eq_zero_profits(com1,reg1)
+       (0.01)   eq_zero_profits(com2,reg1)
+       (1.1692) eq_zero_profits(com3,reg1)
+       (0.01)   eq_zero_profits(com4,reg1)
+       (0.1547) eq_zero_profits(com5,reg1)
+       (0.1461) eq_zero_profits(com6,reg1)
+
+pe(fac1,reg2)
+                (.LO, .L, .UP, .M = 0.01, 0.0450403514033612, +INF, 0)
+      (-0.9401) eq_c(com1,reg2)
+      (-0.9401) eq_c(com2,reg2)
+      (-0.9401) eq_c(com3,reg2)
+      (-0.9401) eq_c(com4,reg2)
+      (-0.9401) eq_c(com5,reg2)
+      (-0.9401) eq_c(com6,reg2)
+     (163.187)  eq_factor_demand(com1,reg2,fac1)
+       (0.6661) eq_factor_demand(com2,reg2,fac1)
+       (0.6661) eq_factor_demand(com3,reg2,fac1)
+       (0.6661) eq_factor_demand(com4,reg2,fac1)
+       (0.6661) eq_factor_demand(com5,reg2,fac1)
+       (0.6661) eq_factor_demand(com6,reg2,fac1)
+       (2.5)    eq_income(reg2)
+       (2.45)   eq_zero_profits(com1,reg2)
+       (0.01)   eq_zero_profits(com2,reg2)
+       (0.01)   eq_zero_profits(com3,reg2)
+       (0.01)   eq_zero_profits(com4,reg2)
+       (0.01)   eq_zero_profits(com5,reg2)
+       (0.01)   eq_zero_profits(com6,reg2)
+
+pe(fac1,reg3)
+                (.LO, .L, .UP, .M = 0.01, 1.1889221480606, +INF, 0)
+      (-1.0282) eq_c(com1,reg3)
+      (-1.0282) eq_c(com2,reg3)
+      (-1.0282) eq_c(com3,reg3)
+      (-1.0282) eq_c(com4,reg3)
+      (-1.0282) eq_c(com5,reg3)
+      (-1.0282) eq_c(com6,reg3)
+       (5.1503) eq_factor_demand(com1,reg3,fac1)
+       (0.0259) eq_factor_demand(com2,reg3,fac1)
+       (0.0259) eq_factor_demand(com3,reg3,fac1)
+       (1.7875) eq_factor_demand(com4,reg3,fac1)
+       (0.781)  eq_factor_demand(com5,reg3,fac1)
+       (1.0608) eq_factor_demand(com6,reg3,fac1)
+       (3.5)    eq_income(reg3)
+       (2.0411) eq_zero_profits(com1,reg3)
+       (0.0103) eq_zero_profits(com2,reg3)
+       (0.0103) eq_zero_profits(com3,reg3)
+       (0.7084) eq_zero_profits(com4,reg3)
+       (0.3095) eq_zero_profits(com5,reg3)
+       (0.4204) eq_zero_profits(com6,reg3)
+
+REMAINING 47 ENTRIES SKIPPED
+
+---- qe  
+
+qe(fac1,com1,reg1)
+                (.LO, .L, .UP, .M = 0.01, 0.01, +INF, EPS)
+        1       eq_factor_demand(com1,reg1,fac1)
+        1       eq_factor_clear(fac1,reg1)
+       (0.4354) eq_zero_profits(com1,reg1)
+
+qe(fac1,com1,reg2)
+                (.LO, .L, .UP, .M = 0.01, 2.45, +INF, 0)
+        1       eq_factor_demand(com1,reg2,fac1)
+        1       eq_factor_clear(fac1,reg2)
+       (0.045)  eq_zero_profits(com1,reg2)
+
+qe(fac1,com1,reg3)
+                (.LO, .L, .UP, .M = 0.01, 2.04110415246751, +INF, 0)
+        1       eq_factor_demand(com1,reg3,fac1)
+        1       eq_factor_clear(fac1,reg3)
+       (1.1889) eq_zero_profits(com1,reg3)
+
+REMAINING 297 ENTRIES SKIPPED
+
+---- y  
+
+y(reg1)
+                (.LO, .L, .UP, .M = 0.01, 19.3504207838031, +INF, 0)
+      (-0.006)  eq_demand(com1,reg1)
+      (-0.0188) eq_demand(com2,reg1)
+      (-0.0188) eq_demand(com3,reg1)
+      (-0.0188) eq_demand(com4,reg1)
+      (-0.0188) eq_demand(com5,reg1)
+      (-0.0188) eq_demand(com6,reg1)
+       -1       eq_income(reg1)
+
+y(reg2)
+                (.LO, .L, .UP, .M = 0.01, 1.46666666666667, +INF, 0)
+      (-0.012)  eq_demand(com1,reg2)
+      (-0.0176) eq_demand(com2,reg2)
+      (-0.0176) eq_demand(com3,reg2)
+      (-0.0176) eq_demand(com4,reg2)
+      (-0.0176) eq_demand(com5,reg2)
+      (-0.0176) eq_demand(com6,reg2)
+       -1       eq_income(reg2)
+
+y(reg3)
+                (.LO, .L, .UP, .M = 0.01, 34.0396086660241, +INF, 0)
+      (-0.018)  eq_demand(com1,reg3)
+      (-0.0164) eq_demand(com2,reg3)
+      (-0.0164) eq_demand(com3,reg3)
+      (-0.0164) eq_demand(com4,reg3)
+      (-0.0164) eq_demand(com5,reg3)
+      (-0.0164) eq_demand(com6,reg3)
+       -1       eq_income(reg3)
+
+REMAINING 7 ENTRIES SKIPPED
+
+---- qet  
+
+qet(fac1,reg1)
+                (.LO, .L, .UP, .M = 1.5, 1.5, 1.5, EPS)
+       (0.4354) eq_income(reg1)
+       -1       eq_factor_clear(fac1,reg1)
+
+qet(fac1,reg2)
+                (.LO, .L, .UP, .M = 2.5, 2.5, 2.5, EPS)
+       (0.045)  eq_income(reg2)
+       -1       eq_factor_clear(fac1,reg2)
+
+qet(fac1,reg3)
+                (.LO, .L, .UP, .M = 3.5, 3.5, 3.5, EPS)
+       (1.1889) eq_income(reg3)
+       -1       eq_factor_clear(fac1,reg3)
+
+REMAINING 47 ENTRIES SKIPPED
+
+---- c  
+
+c(com1,reg1)
+                (.LO, .L, .UP, .M = 0.01, 10.000027001151, +INF, 0)
+      (-0.003)  eq_factor_demand(com1,reg1,fac1)
+      (-0.004)  eq_factor_demand(com1,reg1,fac2)
+      (-0.005)  eq_factor_demand(com1,reg1,fac3)
+      (-0.006)  eq_factor_demand(com1,reg1,fac4)
+      (-0.007)  eq_factor_demand(com1,reg1,fac5)
+
+c(com1,reg2)
+                (.LO, .L, .UP, .M = 0.01, 1.44893191601808, +INF, 0)
+        1       eq_c(com1,reg2)
+      (-5.0727) eq_factor_demand(com1,reg2,fac1)
+      (-6.0872) eq_factor_demand(com1,reg2,fac2)
+      (-7.1018) eq_factor_demand(com1,reg2,fac3)
+      (-8.1163) eq_factor_demand(com1,reg2,fac4)
+      (-9.1309) eq_factor_demand(com1,reg2,fac5)
+
+c(com1,reg3)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+        1       eq_c(com1,reg3)
+      (-0.6123) eq_factor_demand(com1,reg3,fac1)
+      (-0.6998) eq_factor_demand(com1,reg3,fac2)
+      (-0.7873) eq_factor_demand(com1,reg3,fac3)
+      (-0.8748) eq_factor_demand(com1,reg3,fac4)
+      (-0.9622) eq_factor_demand(com1,reg3,fac5)
+
+REMAINING 57 ENTRIES SKIPPED
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 19:35:25 Page 8
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE m2 Using CNS From line 203
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS          545
+BLOCKS OF VARIABLES           8     SINGLE VARIABLES          596
+NON ZERO ELEMENTS         3,334     NON LINEAR N-Z          2,435
+CODE LENGTH               6,916     CONSTANT POOL             186
+SINGLE =E|X= EQUS           545     SINGLE UNFIXED VARS       545
+
+
+GENERATION TIME      =        0.015 SECONDS      4 MB  33.2.0 r4f23b21 WEX-WEI
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 19:35:25 Page 9
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE m2 Using CNS From line 203
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   m2                  
+     TYPE    CNS                 
+     SOLVER  PATH                FROM LINE  203
+
+**** SOLVER STATUS     1 Normal Completion         
+**** MODEL STATUS      5 Locally Infeasible        
+
+ RESOURCE USAGE, LIMIT          1.250 10000000000.000
+ ITERATION COUNT, LIMIT     15961    2147483647
+ EVALUATION ERRORS              0             0
+545 row/cols, 3164 non-zeros, 1.07% dense.
+
+Path 5.0.02 (Tue Dec  1 17:26:19 2020)
+Written by Todd Munson, Steven Dirkse, Youngdae Kim, and Michael Ferris
+
+INITIAL POINT STATISTICS
+Maximum of X. . . . . . . . . .  9.2240e+01 var: (y(reg10))
+Maximum of F. . . . . . . . . .  8.9740e-01 eqn: (eq_c(com1,reg2))
+Maximum of Grad F . . . . . . .  1.6319e+02 eqn: (eq_factor_demand(com1,reg2,fa)
+                                            var: (pe(fac1,reg2))
+
+INITIAL JACOBIAN NORM STATISTICS
+Maximum Row Norm. . . . . . . .  1.9617e+02 eqn: (eq_factor_demand(com1,reg2,fa)
+Minimum Row Norm. . . . . . . .  1.0000e+00 eqn: (s(1))
+Maximum Column Norm . . . . . .  1.7768e+02 var: (pe(fac5,reg2))
+Minimum Column Norm . . . . . .  2.5000e-02 var: (c(com1,reg1))
+
+FINAL STATISTICS
+Inf-Norm of Complementarity . .  8.9606e-01 eqn: (eq_c(com1,reg2))
+Inf-Norm of Normal Map. . . . .  8.9606e-01 eqn: (eq_c(com1,reg2))
+Inf-Norm of Minimum Map . . . .  8.9606e-01 eqn: (eq_c(com1,reg2))
+Inf-Norm of Fischer Function. .  8.9606e-01 eqn: (eq_c(com1,reg2))
+Inf-Norm of Grad Fischer Fcn. .  1.1386e+00 eqn: (s(67))
+Two-Norm of Grad Fischer Fcn. .  2.7070e+00
+
+FINAL POINT STATISTICS
+Maximum of X. . . . . . . . . .  9.2240e+01 var: (y(reg10))
+Maximum of F. . . . . . . . . .  8.9606e-01 eqn: (eq_c(com1,reg2))
+Maximum of Grad F . . . . . . .  1.6235e+02 eqn: (eq_factor_demand(com1,reg2,fa)
+                                            var: (pe(fac1,reg2))
+
+
+---- EQU eq_c  
+
+              LOWER     LEVEL     UPPER
+
+com1.reg2       .        0.896      .    INFES
+com1.reg3       .         .         .         
+com1.reg4       .         .         .         
+com1.reg5       .         .         .         
+com1.reg6       .         .         .         
+com1.reg7       .         .         .         
+com1.reg8       .    3.7032E-6      .    INFES
+com1.reg9       .         .         .         
+com1.reg10      .         .         .         
+com2.reg1       .         .         .         
+com2.reg2       .    -9.891E-4      .    INFES
+com2.reg3       .    3.3291E-8      .         
+com2.reg4       .    -3.172E-8      .         
+com2.reg5       .         .         .         
+com2.reg6       .         .         .         
+com2.reg7       .         .         .         
+com2.reg8       .    3.6886E-6      .    INFES
+com2.reg9       .         .         .         
+com2.reg10      .         .         .         
+com3.reg1       .         .         .         
+com3.reg2       .    -9.891E-4      .    INFES
+com3.reg3       .         .         .         
+com3.reg4       .         .         .         
+com3.reg5       .         .         .         
+com3.reg6       .         .         .         
+com3.reg7       .         .         .         
+com3.reg8       .    3.6907E-6      .    INFES
+com3.reg9       .         .         .         
+com3.reg10      .         .         .         
+com4.reg1       .         .         .         
+com4.reg2       .    -9.891E-4      .    INFES
+com4.reg3       .         .         .         
+com4.reg4       .         .         .         
+com4.reg5       .         .         .         
+com4.reg6       .         .         .         
+com4.reg7       .         .         .         
+com4.reg8       .    3.6854E-6      .    INFES
+com4.reg9       .         .         .         
+com4.reg10      .         .         .         
+com5.reg1       .         .         .         
+com5.reg2       .    -9.891E-4      .    INFES
+com5.reg3       .    1.2451E-8      .         
+com5.reg4       .    -2.526E-8      .         
+com5.reg5       .    1.4677E-8      .         
+com5.reg6       .         .         .         
+com5.reg7       .    1.6590E-8      .         
+com5.reg8       .    3.6953E-6      .    INFES
+com5.reg9       .    -4.094E-8      .         
+com5.reg10      .    1.7873E-8      .         
+com6.reg1       .         .         .         
+com6.reg2       .    -9.891E-4      .    INFES
+com6.reg3       .         .         .         
+com6.reg4       .         .         .         
+com6.reg5       .         .         .         
+com6.reg6       .         .         .         
+com6.reg7       .         .         .         
+com6.reg8       .    3.6849E-6      .    INFES
+com6.reg9       .         .         .         
+com6.reg10      .         .         .         
+
+---- EQU eq_demand  
+
+              LOWER     LEVEL     UPPER
+
+com1.reg1      0.002     0.003     0.002      
+com1.reg2      0.005     0.005     0.005      
+com1.reg3      0.007     0.008     0.007      
+com1.reg4      0.010     0.010     0.010      
+com1.reg5      0.012     0.013     0.012      
+com1.reg6      0.015     0.015     0.015      
+com1.reg7      0.017     0.018     0.017      
+com1.reg8      0.020     0.020     0.020      
+com1.reg9      0.022     0.023     0.022      
+com1.reg10     0.025     0.025     0.025      
+com2.reg1      0.005     0.005     0.005      
+com2.reg2      0.010     0.010     0.010      
+com2.reg3      0.015     0.015     0.015      
+com2.reg4      0.020     0.020     0.020      
+com2.reg5      0.025     0.025     0.025      
+com2.reg6      0.030     0.030     0.030      
+com2.reg7      0.035     0.035     0.035      
+com2.reg8      0.040     0.040     0.040      
+com2.reg9      0.045     0.045     0.045      
+com2.reg10     0.050     0.050     0.050      
+com3.reg1      0.008     0.007     0.008      
+com3.reg2      0.015     0.015     0.015      
+com3.reg3      0.022     0.022     0.022      
+com3.reg4      0.030     0.030     0.030      
+com3.reg5      0.037     0.037     0.037      
+com3.reg6      0.045     0.045     0.045      
+com3.reg7      0.052     0.052     0.052      
+com3.reg8      0.060     0.060     0.060      
+com3.reg9      0.068     0.067     0.068      
+com3.reg10     0.075     0.075     0.075      
+com4.reg1      0.010     0.010     0.010      
+com4.reg2      0.020     0.020     0.020      
+com4.reg3      0.030     0.030     0.030      
+com4.reg4      0.040     0.040     0.040      
+com4.reg5      0.050     0.050     0.050      
+com4.reg6      0.060     0.060     0.060      
+com4.reg7      0.070     0.070     0.070      
+com4.reg8      0.080     0.080     0.080      
+com4.reg9      0.090     0.090     0.090      
+com4.reg10     0.100     0.100     0.100      
+com5.reg1      0.012     0.012     0.012      
+com5.reg2      0.025     0.025     0.025      
+com5.reg3      0.037     0.037     0.037      
+com5.reg4      0.050     0.050     0.050      
+com5.reg5      0.062     0.062     0.062      
+com5.reg6      0.075     0.075     0.075      
+com5.reg7      0.088     0.087     0.088      
+com5.reg8      0.100     0.100     0.100      
+com5.reg9      0.112     0.112     0.112      
+com5.reg10     0.125     0.125     0.125      
+com6.reg1      0.015     0.015     0.015      
+com6.reg2      0.030     0.030     0.030      
+com6.reg3      0.045     0.045     0.045      
+com6.reg4      0.060     0.060     0.060      
+com6.reg5      0.075     0.075     0.075      
+com6.reg6      0.090     0.090     0.090      
+com6.reg7      0.105     0.105     0.105      
+com6.reg8      0.120     0.120     0.120      
+com6.reg9      0.135     0.135     0.135      
+com6.reg10     0.150     0.150     0.150      
+
+---- EQU eq_market_clear  
+
+        LOWER     LEVEL     UPPER
+
+com1      .    -4.730E-4      .    INFES
+com2      .    5.3300E-4      .    INFES
+com3      .    5.3266E-4      .    INFES
+com4      .    5.3300E-4      .    INFES
+com5      .    5.3300E-4      .    INFES
+com6      .    5.3300E-4      .    INFES
+
+---- EQU eq_factor_demand  
+
+                   LOWER     LEVEL     UPPER
+
+com1.reg1 .fac1      .    3.1653E-7      .         
+com1.reg1 .fac2      .    5.6335E-8      .         
+com1.reg1 .fac3      .    1.0493E-7      .         
+com1.reg1 .fac4      .    5.0023E-8      .         
+com1.reg1 .fac5      .    9.8378E-8      .         
+com1.reg2 .fac1      .        0.008      .    INFES
+com1.reg2 .fac2      .        0.010      .    INFES
+com1.reg2 .fac3      .        0.009      .    INFES
+com1.reg2 .fac4      .        0.009      .    INFES
+com1.reg2 .fac5      .        0.011      .    INFES
+com1.reg3 .fac1      .    6.2905E-8      .         
+com1.reg3 .fac2      .    7.2035E-8      .         
+com1.reg3 .fac3      .    7.4667E-8      .         
+com1.reg3 .fac4      .    8.9813E-8      .         
+com1.reg3 .fac5      .    1.0609E-7      .         
+com1.reg4 .fac1      .    6.2454E-8      .         
+com1.reg4 .fac2      .    7.0872E-8      .         
+com1.reg4 .fac3      .    7.9035E-8      .         
+com1.reg4 .fac4      .    9.4311E-8      .         
+com1.reg4 .fac5      .    9.0102E-8      .         
+com1.reg5 .fac1      .    6.3453E-8      .         
+com1.reg5 .fac2      .    7.3807E-8      .         
+com1.reg5 .fac3      .    8.0048E-8      .         
+com1.reg5 .fac4      .    8.4896E-8      .         
+com1.reg5 .fac5      .    9.9155E-8      .         
+com1.reg6 .fac1      .    6.9393E-8      .         
+com1.reg6 .fac2      .    7.3502E-8      .         
+com1.reg6 .fac3      .    7.5756E-8      .         
+com1.reg6 .fac4      .    8.4270E-8      .         
+com1.reg6 .fac5      .    9.1450E-8      .         
+com1.reg7 .fac1      .    7.1673E-8      .         
+com1.reg7 .fac2      .    7.3319E-8      .         
+com1.reg7 .fac3      .    9.0386E-8      .         
+com1.reg7 .fac4      .    5.3904E-8      .         
+com1.reg7 .fac5      .    1.0213E-7      .         
+com1.reg8 .fac1      .    -1.500E-6      .    INFES
+com1.reg8 .fac2      .    -2.872E-6      .    INFES
+com1.reg8 .fac3      .    -3.207E-6      .    INFES
+com1.reg8 .fac4      .    -3.629E-6      .    INFES
+com1.reg8 .fac5      .    2.1188E-4      .    INFES
+com1.reg9 .fac1      .    7.1366E-8      .         
+com1.reg9 .fac2      .    7.0384E-8      .         
+com1.reg9 .fac3      .    7.2041E-8      .         
+com1.reg9 .fac4      .    7.7055E-8      .         
+com1.reg9 .fac5      .    7.7775E-8      .         
+com1.reg10.fac1      .    6.7839E-8      .         
+com1.reg10.fac2      .    6.2983E-8      .         
+com1.reg10.fac3      .    6.7022E-8      .         
+com1.reg10.fac4      .    7.7401E-8      .         
+com1.reg10.fac5      .    7.5582E-8      .         
+com2.reg1 .fac1      .    1.7746E-7      .         
+com2.reg1 .fac2      .    -9.011E-8      .         
+com2.reg1 .fac3      .    -1.514E-7      .         
+com2.reg1 .fac4      .    -7.029E-8      .         
+com2.reg1 .fac5      .    -1.832E-7      .         
+com2.reg2 .fac1      .    5.6019E-4      .    INFES
+com2.reg2 .fac2      .    6.7860E-4      .    INFES
+com2.reg2 .fac3      .    7.7997E-4      .    INFES
+com2.reg2 .fac4      .    8.8489E-4      .    INFES
+com2.reg2 .fac5      .    9.9662E-4      .    INFES
+com2.reg3 .fac1      .    -8.960E-8      .         
+com2.reg3 .fac2      .    -1.027E-7      .         
+com2.reg3 .fac3      .    -7.650E-8      .         
+com2.reg3 .fac4      .    -1.675E-7      .         
+com2.reg3 .fac5      .    -1.426E-7      .         
+com2.reg4 .fac1      .    -9.115E-8      .         
+com2.reg4 .fac2      .    -1.024E-7      .         
+com2.reg4 .fac3      .    -1.175E-7      .         
+com2.reg4 .fac4      .    -1.278E-7      .         
+com2.reg4 .fac5      .    -1.362E-7      .         
+com2.reg5 .fac1      .    -9.756E-8      .         
+com2.reg5 .fac2      .    -1.067E-7      .         
+com2.reg5 .fac3      .    -1.229E-7      .         
+com2.reg5 .fac4      .    -1.248E-7      .         
+com2.reg5 .fac5      .    -1.257E-7      .         
+com2.reg6 .fac1      .    -1.018E-7      .         
+com2.reg6 .fac2      .    -1.081E-7      .         
+com2.reg6 .fac3      .    -1.145E-7      .         
+com2.reg6 .fac4      .    -1.134E-7      .         
+com2.reg6 .fac5      .    -1.327E-7      .         
+com2.reg7 .fac1      .    -1.066E-7      .         
+com2.reg7 .fac2      .    -1.077E-7      .         
+com2.reg7 .fac3      .    -1.143E-7      .         
+com2.reg7 .fac4      .    -1.225E-7      .         
+com2.reg7 .fac5      .    -1.204E-7      .         
+com2.reg8 .fac1      .    -1.300E-6      .    INFES
+com2.reg8 .fac2      .    -2.098E-6      .    INFES
+com2.reg8 .fac3      .    -2.317E-6      .    INFES
+com2.reg8 .fac4      .    -2.542E-6      .    INFES
+com2.reg8 .fac5      .    2.1562E-4      .    INFES
+com2.reg9 .fac1      .    -1.001E-7      .         
+com2.reg9 .fac2      .    -1.077E-7      .         
+com2.reg9 .fac3      .    -9.871E-8      .         
+com2.reg9 .fac4      .    -1.501E-7      .         
+com2.reg9 .fac5      .    -1.074E-7      .         
+com2.reg10.fac1      .    -1.027E-7      .         
+com2.reg10.fac2      .    -8.958E-8      .         
+com2.reg10.fac3      .    -9.523E-8      .         
+com2.reg10.fac4      .    -1.701E-7      .         
+com2.reg10.fac5      .    -1.075E-7      .         
+com3.reg1 .fac1      .    -6.548E-8      .         
+com3.reg1 .fac2      .    -9.187E-8      .         
+com3.reg1 .fac3      .    -1.168E-7      .         
+com3.reg1 .fac4      .    -1.378E-7      .         
+com3.reg1 .fac5      .    -1.637E-7      .         
+com3.reg2 .fac1      .    5.6018E-4      .    INFES
+com3.reg2 .fac2      .    6.7861E-4      .    INFES
+com3.reg2 .fac3      .    7.7997E-4      .    INFES
+com3.reg2 .fac4      .    8.8486E-4      .    INFES
+com3.reg2 .fac5      .    9.9663E-4      .    INFES
+com3.reg3 .fac1      .    -4.423E-7      .         
+com3.reg3 .fac2      .    -5.060E-7      .         
+com3.reg3 .fac3      .    -6.135E-7      .         
+com3.reg3 .fac4      .    -5.604E-7      .         
+com3.reg3 .fac5      .    -7.237E-7      .         
+com3.reg4 .fac1      .    -9.407E-8      .         
+com3.reg4 .fac2      .    -1.200E-7      .         
+com3.reg4 .fac3      .    -1.249E-7      .         
+com3.reg4 .fac4      .    -8.609E-8      .         
+com3.reg4 .fac5      .    -1.521E-7      .         
+com3.reg5 .fac1      .    -9.665E-8      .         
+com3.reg5 .fac2      .    -1.058E-7      .         
+com3.reg5 .fac3      .    -7.068E-8      .         
+com3.reg5 .fac4      .    -1.664E-7      .         
+com3.reg5 .fac5      .    -1.338E-7      .         
+com3.reg6 .fac1      .    -9.702E-8      .         
+com3.reg6 .fac2      .    -1.058E-7      .         
+com3.reg6 .fac3      .    -1.183E-7      .         
+com3.reg6 .fac4      .    -1.259E-7      .         
+com3.reg6 .fac5      .    -1.315E-7      .         
+com3.reg7 .fac1      .    -9.928E-8      .         
+com3.reg7 .fac2      .    -1.063E-7      .         
+com3.reg7 .fac3      .    -1.213E-7      .         
+com3.reg7 .fac4      .    -1.199E-7      .         
+com3.reg7 .fac5      .    -1.179E-7      .         
+com3.reg8 .fac1      .    -1.317E-6      .    INFES
+com3.reg8 .fac2      .    -2.135E-6      .    INFES
+com3.reg8 .fac3      .    -2.354E-6      .    INFES
+com3.reg8 .fac4      .    -2.579E-6      .    INFES
+com3.reg8 .fac5      .    2.1547E-4      .    INFES
+com3.reg9 .fac1      .    -1.077E-7      .         
+com3.reg9 .fac2      .    -1.062E-7      .         
+com3.reg9 .fac3      .    -1.113E-7      .         
+com3.reg9 .fac4      .    -1.183E-7      .         
+com3.reg9 .fac5      .    -1.140E-7      .         
+com3.reg10.fac1      .    -9.966E-8      .         
+com3.reg10.fac2      .    -1.065E-7      .         
+com3.reg10.fac3      .    -1.148E-7      .         
+com3.reg10.fac4      .    -1.160E-7      .         
+com3.reg10.fac5      .    -1.187E-7      .         
+com4.reg1 .fac1      .    -6.585E-8      .         
+com4.reg1 .fac2      .    -9.014E-8      .         
+com4.reg1 .fac3      .    -9.655E-8      .         
+com4.reg1 .fac4      .    -1.700E-7      .         
+com4.reg1 .fac5      .    -1.398E-7      .         
+com4.reg2 .fac1      .    5.6018E-4      .    INFES
+com4.reg2 .fac2      .    6.7864E-4      .    INFES
+com4.reg2 .fac3      .    7.7999E-4      .    INFES
+com4.reg2 .fac4      .    8.8480E-4      .    INFES
+com4.reg2 .fac5      .    9.9665E-4      .    INFES
+com4.reg3 .fac1      .    -8.613E-8      .         
+com4.reg3 .fac2      .    -1.033E-7      .         
+com4.reg3 .fac3      .    -1.185E-7      .         
+com4.reg3 .fac4      .    -1.292E-7      .         
+com4.reg3 .fac5      .    -1.452E-7      .         
+com4.reg4 .fac1      .    -9.440E-8      .         
+com4.reg4 .fac2      .    -1.089E-7      .         
+com4.reg4 .fac3      .    -1.180E-7      .         
+com4.reg4 .fac4      .    -1.200E-7      .         
+com4.reg4 .fac5      .    -1.354E-7      .         
+com4.reg5 .fac1      .    -9.633E-8      .         
+com4.reg5 .fac2      .    -1.058E-7      .         
+com4.reg5 .fac3      .    -1.643E-7      .         
+com4.reg5 .fac4      .    -4.401E-8      .         
+com4.reg5 .fac5      .    -1.623E-7      .         
+com4.reg6 .fac1      .    -9.881E-8      .         
+com4.reg6 .fac2      .    -1.229E-7      .         
+com4.reg6 .fac3      .    -1.246E-7      .         
+com4.reg6 .fac4      .    -8.028E-8      .         
+com4.reg6 .fac5      .    -1.462E-7      .         
+com4.reg7 .fac1      .    -9.939E-8      .         
+com4.reg7 .fac2      .    -1.066E-7      .         
+com4.reg7 .fac3      .    -6.450E-8      .         
+com4.reg7 .fac4      .    -1.669E-7      .         
+com4.reg7 .fac5      .    -1.283E-7      .         
+com4.reg8 .fac1      .    -1.225E-6      .    INFES
+com4.reg8 .fac2      .    -1.904E-6      .    INFES
+com4.reg8 .fac3      .    -2.100E-6      .    INFES
+com4.reg8 .fac4      .    -2.302E-6      .    INFES
+com4.reg8 .fac5      .    2.1639E-4      .    INFES
+com4.reg9 .fac1      .    -1.018E-7      .         
+com4.reg9 .fac2      .    -1.082E-7      .         
+com4.reg9 .fac3      .    -1.226E-7      .         
+com4.reg9 .fac4      .    -1.194E-7      .         
+com4.reg9 .fac5      .    -1.155E-7      .         
+com4.reg10.fac1      .    -1.060E-7      .         
+com4.reg10.fac2      .    -1.115E-7      .         
+com4.reg10.fac3      .    -1.153E-7      .         
+com4.reg10.fac4      .    -1.108E-7      .         
+com4.reg10.fac5      .    -1.288E-7      .         
+com5.reg1 .fac1      .    -7.651E-8      .         
+com5.reg1 .fac2      .    -9.034E-8      .         
+com5.reg1 .fac3      .    -1.129E-7      .         
+com5.reg1 .fac4      .    -1.372E-7      .         
+com5.reg1 .fac5      .    -1.492E-7      .         
+com5.reg2 .fac1      .    5.6019E-4      .    INFES
+com5.reg2 .fac2      .    6.7862E-4      .    INFES
+com5.reg2 .fac3      .    7.7997E-4      .    INFES
+com5.reg2 .fac4      .    8.8486E-4      .    INFES
+com5.reg2 .fac5      .    9.9663E-4      .    INFES
+com5.reg3 .fac1      .    -8.777E-8      .         
+com5.reg3 .fac2      .    -1.028E-7      .         
+com5.reg3 .fac3      .    -9.781E-8      .         
+com5.reg3 .fac4      .    -1.665E-7      .         
+com5.reg3 .fac5      .    -1.222E-7      .         
+com5.reg4 .fac1      .    -9.568E-8      .         
+com5.reg4 .fac2      .    -8.386E-8      .         
+com5.reg4 .fac3      .    -9.534E-8      .         
+com5.reg4 .fac4      .    -1.828E-7      .         
+com5.reg4 .fac5      .    -1.190E-7      .         
+com5.reg5 .fac1      .    -9.302E-8      .         
+com5.reg5 .fac2      .    -1.072E-7      .         
+com5.reg5 .fac3      .    -1.185E-7      .         
+com5.reg5 .fac4      .    -1.249E-7      .         
+com5.reg5 .fac5      .    -1.374E-7      .         
+com5.reg6 .fac1      .    -9.825E-8      .         
+com5.reg6 .fac2      .    -1.103E-7      .         
+com5.reg6 .fac3      .    -1.162E-7      .         
+com5.reg6 .fac4      .    -1.146E-7      .         
+com5.reg6 .fac5      .    -1.275E-7      .         
+com5.reg7 .fac1      .    -1.008E-7      .         
+com5.reg7 .fac2      .    -1.085E-7      .         
+com5.reg7 .fac3      .    -1.706E-7      .         
+com5.reg7 .fac4      .    -3.552E-8      .         
+com5.reg7 .fac5      .    -1.612E-7      .         
+com5.reg8 .fac1      .    -1.021E-6      .    INFES
+com5.reg8 .fac2      .    -1.375E-6      .    INFES
+com5.reg8 .fac3      .    -1.487E-6      .    INFES
+com5.reg8 .fac4      .    -1.556E-6      .    INFES
+com5.reg8 .fac5      .    2.1862E-4      .    INFES
+com5.reg9 .fac1      .    -9.922E-8      .         
+com5.reg9 .fac2      .    -1.051E-7      .         
+com5.reg9 .fac3      .    -5.666E-8      .         
+com5.reg9 .fac4      .    -1.664E-7      .         
+com5.reg9 .fac5      .    -1.226E-7      .         
+com5.reg10.fac1      .    -1.010E-7      .         
+com5.reg10.fac2      .    -1.107E-7      .         
+com5.reg10.fac3      .    -1.216E-7      .         
+com5.reg10.fac4      .    -1.268E-7      .         
+com5.reg10.fac5      .    -1.298E-7      .         
+com6.reg1 .fac1      .    -6.739E-8      .         
+com6.reg1 .fac2      .    -9.029E-8      .         
+com6.reg1 .fac3      .    -1.229E-7      .         
+com6.reg1 .fac4      .    -1.359E-7      .         
+com6.reg1 .fac5      .    -1.485E-7      .         
+com6.reg2 .fac1      .    5.6018E-4      .    INFES
+com6.reg2 .fac2      .    6.7861E-4      .    INFES
+com6.reg2 .fac3      .    7.7997E-4      .    INFES
+com6.reg2 .fac4      .    8.8487E-4      .    INFES
+com6.reg2 .fac5      .    9.9663E-4      .    INFES
+com6.reg3 .fac1      .    -1.003E-7      .         
+com6.reg3 .fac2      .    -1.030E-7      .         
+com6.reg3 .fac3      .    -1.156E-7      .         
+com6.reg3 .fac4      .    -1.304E-7      .         
+com6.reg3 .fac5      .    -1.321E-7      .         
+com6.reg4 .fac1      .    -9.313E-8      .         
+com6.reg4 .fac2      .    -1.047E-7      .         
+com6.reg4 .fac3      .    -1.189E-7      .         
+com6.reg4 .fac4      .    -1.252E-7      .         
+com6.reg4 .fac5      .    -1.333E-7      .         
+com6.reg5 .fac1      .    -9.613E-8      .         
+com6.reg5 .fac2      .    -1.077E-7      .         
+com6.reg5 .fac3      .    -9.696E-8      .         
+com6.reg5 .fac4      .    -1.668E-7      .         
+com6.reg5 .fac5      .    -1.139E-7      .         
+com6.reg6 .fac1      .    -1.012E-7      .         
+com6.reg6 .fac2      .    -8.563E-8      .         
+com6.reg6 .fac3      .    -9.538E-8      .         
+com6.reg6 .fac4      .    -1.827E-7      .         
+com6.reg6 .fac5      .    -1.128E-7      .         
+com6.reg7 .fac1      .    -9.460E-8      .         
+com6.reg7 .fac2      .    -1.075E-7      .         
+com6.reg7 .fac3      .    -1.170E-7      .         
+com6.reg7 .fac4      .    -1.210E-7      .         
+com6.reg7 .fac5      .    -1.313E-7      .         
+com6.reg8 .fac1      .    -1.194E-6      .    INFES
+com6.reg8 .fac2      .    -1.822E-6      .    INFES
+com6.reg8 .fac3      .    -1.999E-6      .    INFES
+com6.reg8 .fac4      .    -2.179E-6      .    INFES
+com6.reg8 .fac5      .    2.1676E-4      .    INFES
+com6.reg9 .fac1      .    -1.010E-7      .         
+com6.reg9 .fac2      .    -1.079E-7      .         
+com6.reg9 .fac3      .    -1.742E-7      .         
+com6.reg9 .fac4      .    -2.507E-8      .         
+com6.reg9 .fac5      .    -1.590E-7      .         
+com6.reg10.fac1      .    -9.883E-8      .         
+com6.reg10.fac2      .    -1.221E-7      .         
+com6.reg10.fac3      .    -1.197E-7      .         
+com6.reg10.fac4      .    -6.779E-8      .         
+com6.reg10.fac5      .    -1.362E-7      .         
+
+---- EQU eq_income  
+
+         LOWER     LEVEL     UPPER
+
+reg1       .         .         .         
+reg2       .        0.003      .    INFES
+reg3       .         .         .         
+reg4       .         .         .         
+reg5       .         .         .         
+reg6       .         .         .         
+reg7       .         .         .         
+reg8       .    -2.771E-5      .    INFES
+reg9       .    -1.889E-8      .         
+reg10      .    -4.331E-8      .         
+
+---- EQU eq_factor_clear  
+
+              LOWER     LEVEL     UPPER
+
+fac1.reg1       .    2.4493E-7      .         
+fac1.reg2       .    9.2970E-6      .    INFES
+fac1.reg3       .         .         .         
+fac1.reg4       .         .         .         
+fac1.reg5       .         .         .         
+fac1.reg6       .         .         .         
+fac1.reg7       .         .         .         
+fac1.reg8       .    -8.006E-7      .         
+fac1.reg9       .         .         .         
+fac1.reg10      .         .         .         
+fac2.reg1       .         .         .         
+fac2.reg2       .    2.1671E-5      .    INFES
+fac2.reg3       .         .         .         
+fac2.reg4       .         .         .         
+fac2.reg5       .         .         .         
+fac2.reg6       .         .         .         
+fac2.reg7       .         .         .         
+fac2.reg8       .    -3.331E-7      .         
+fac2.reg9       .         .         .         
+fac2.reg10      .         .         .         
+fac3.reg1       .         .         .         
+fac3.reg2       .    1.9849E-5      .    INFES
+fac3.reg3       .         .         .         
+fac3.reg4       .         .         .         
+fac3.reg5       .         .         .         
+fac3.reg6       .         .         .         
+fac3.reg7       .         .         .         
+fac3.reg8       .    -3.271E-7      .         
+fac3.reg9       .         .         .         
+fac3.reg10      .         .         .         
+fac4.reg1       .         .         .         
+fac4.reg2       .    1.8550E-5      .    INFES
+fac4.reg3       .         .         .         
+fac4.reg4       .         .         .         
+fac4.reg5       .         .         .         
+fac4.reg6       .         .         .         
+fac4.reg7       .         .         .         
+fac4.reg8       .    -3.214E-7      .         
+fac4.reg9       .         .         .         
+fac4.reg10      .         .         .         
+fac5.reg1       .         .         .         
+fac5.reg2       .    1.7565E-5      .    INFES
+fac5.reg3       .         .         .         
+fac5.reg4       .         .         .         
+fac5.reg5       .         .         .         
+fac5.reg6       .         .         .         
+fac5.reg7       .         .         .         
+fac5.reg8       .       -0.408      .    INFES
+fac5.reg9       .         .         .         
+fac5.reg10      .         .         .         
+
+---- EQU eq_zero_profits  
+
+              LOWER     LEVEL     UPPER
+
+com1.reg1       .    1.5960E-6      .    INFES
+com1.reg2       .       -0.002      .    INFES
+com1.reg3       .    6.1369E-7      .         
+com1.reg4       .    6.1020E-7      .         
+com1.reg5       .    6.1261E-7      .         
+com1.reg6       .    6.1159E-7      .         
+com1.reg7       .    6.1117E-7      .         
+com1.reg8       .    2.5933E-4      .    INFES
+com1.reg9       .    6.0653E-7      .         
+com1.reg10      .    6.0017E-7      .         
+com2.reg1       .    -7.594E-7      .         
+com2.reg2       .       -0.095      .    INFES
+com2.reg3       .    -8.675E-7      .         
+com2.reg4       .    -8.675E-7      .         
+com2.reg5       .    -5.042E-7      .         
+com2.reg6       .    -7.170E-7      .         
+com2.reg7       .    -3.093E-7      .         
+com2.reg8       .    2.6178E-4      .    INFES
+com2.reg9       .    -2.257E-7      .         
+com2.reg10      .    -2.904E-7      .         
+com3.reg1       .    -1.264E-7      .         
+com3.reg2       .       -0.095      .    INFES
+com3.reg3       .    -4.302E-6      .    INFES
+com3.reg4       .    -7.849E-7      .         
+com3.reg5       .    -8.673E-7      .         
+com3.reg6       .    -1.885E-7      .         
+com3.reg7       .    -6.960E-7      .         
+com3.reg8       .    2.6168E-4      .    INFES
+com3.reg9       .    -5.406E-7      .         
+com3.reg10      .    -5.262E-7      .         
+com4.reg1       .    -8.659E-7      .         
+com4.reg2       .       -0.095      .    INFES
+com4.reg3       .    -5.253E-7      .         
+com4.reg4       .    -7.512E-7      .         
+com4.reg5       .    -8.022E-7      .         
+com4.reg6       .    -5.840E-7      .         
+com4.reg7       .    -7.021E-7      .         
+com4.reg8       .    2.6235E-4      .    INFES
+com4.reg9       .    -1.028E-7      .         
+com4.reg10      .    -5.090E-8      .         
+com5.reg1       .    -7.676E-7      .         
+com5.reg2       .       -0.095      .    INFES
+com5.reg3       .    -7.142E-7      .         
+com5.reg4       .    -8.682E-7      .         
+com5.reg5       .    -3.299E-7      .         
+com5.reg6       .    -8.671E-7      .         
+com5.reg7       .    -5.217E-8      .         
+com5.reg8       .    2.6398E-4      .    INFES
+com5.reg9       .    -8.668E-7      .         
+com5.reg10      .    5.3562E-7      .         
+com6.reg1       .    -7.768E-7      .         
+com6.reg2       .       -0.095      .    INFES
+com6.reg3       .    -6.650E-7      .         
+com6.reg4       .    -8.674E-7      .         
+com6.reg5       .    -1.702E-7      .         
+com6.reg6       .    -3.338E-7      .         
+com6.reg7       .    -3.623E-7      .         
+com6.reg8       .    2.6262E-4      .    INFES
+com6.reg9       .    -1.344E-7      .         
+com6.reg10      .    -8.670E-7      .         
+
+---- VAR p  
+
+        LOWER     LEVEL     UPPER
+
+com1    10.000    10.000    10.000      
+com2     0.010    10.000     +INF       
+com3     0.010    10.000     +INF       
+com4     0.010    10.000     +INF       
+com5     0.010    10.000     +INF       
+com6     0.010    10.000     +INF       
+
+---- VAR qp  
+
+              LOWER     LEVEL     UPPER
+
+com1.reg1      0.010     0.115     +INF       
+com1.reg2      0.010     0.010     +INF       
+com1.reg3      0.010     0.592     +INF       
+com1.reg4      0.010     0.960     +INF       
+com1.reg5      0.010     1.421     +INF       
+com1.reg6      0.010     1.977     +INF       
+com1.reg7      0.010     2.634     +INF       
+com1.reg8      0.010     3.395     +INF       
+com1.reg9      0.010     4.263     +INF       
+com1.reg10     0.010     5.244     +INF       
+com2.reg1      0.010     0.359     +INF       
+com2.reg2      0.010     0.017     +INF       
+com2.reg3      0.010     0.547     +INF       
+com2.reg4      0.010     0.622     +INF       
+com2.reg5      0.010     0.682     +INF       
+com2.reg6      0.010     0.728     +INF       
+com2.reg7      0.010     0.758     +INF       
+com2.reg8      0.010     0.771     +INF       
+com2.reg9      0.010     0.768     +INF       
+com2.reg10     0.010     0.746     +INF       
+com3.reg1      0.010     0.361     +INF       
+com3.reg2      0.010     0.022     +INF       
+com3.reg3      0.010     0.555     +INF       
+com3.reg4      0.010     0.632     +INF       
+com3.reg5      0.010     0.695     +INF       
+com3.reg6      0.010     0.743     +INF       
+com3.reg7      0.010     0.775     +INF       
+com3.reg8      0.010     0.791     +INF       
+com3.reg9      0.010     0.790     +INF       
+com3.reg10     0.010     0.771     +INF       
+com4.reg1      0.010     0.364     +INF       
+com4.reg2      0.010     0.027     +INF       
+com4.reg3      0.010     0.562     +INF       
+com4.reg4      0.010     0.642     +INF       
+com4.reg5      0.010     0.707     +INF       
+com4.reg6      0.010     0.758     +INF       
+com4.reg7      0.010     0.793     +INF       
+com4.reg8      0.010     0.811     +INF       
+com4.reg9      0.010     0.813     +INF       
+com4.reg10     0.010     0.796     +INF       
+com5.reg1      0.010     0.366     +INF       
+com5.reg2      0.010     0.032     +INF       
+com5.reg3      0.010     0.570     +INF       
+com5.reg4      0.010     0.652     +INF       
+com5.reg5      0.010     0.720     +INF       
+com5.reg6      0.010     0.773     +INF       
+com5.reg7      0.010     0.810     +INF       
+com5.reg8      0.010     0.831     +INF       
+com5.reg9      0.010     0.835     +INF       
+com5.reg10     0.010     0.821     +INF       
+com6.reg1      0.010     0.369     +INF       
+com6.reg2      0.010     0.037     +INF       
+com6.reg3      0.010     0.577     +INF       
+com6.reg4      0.010     0.662     +INF       
+com6.reg5      0.010     0.732     +INF       
+com6.reg6      0.010     0.788     +INF       
+com6.reg7      0.010     0.828     +INF       
+com6.reg8      0.010     0.851     +INF       
+com6.reg9      0.010     0.858     +INF       
+com6.reg10     0.010     0.846     +INF       
+
+---- VAR qs  
+
+              LOWER     LEVEL     UPPER
+
+com1.reg1      0.010     0.013     +INF       
+com1.reg2      0.010     0.144     +INF       
+com1.reg3      0.010     1.985     +INF       
+com1.reg4      0.010     3.722     +INF       
+com1.reg5      0.010     1.645     +INF       
+com1.reg6      0.010     2.421     +INF       
+com1.reg7      0.010     2.193     +INF       
+com1.reg8      0.010     2.177     +INF       
+com1.reg9      0.010     3.338     +INF       
+com1.reg10     0.010     2.974     +INF       
+com2.reg1      0.010     0.013     +INF       
+com2.reg2      0.010     0.010     +INF       
+com2.reg3      0.010     0.010     +INF       
+com2.reg4      0.010     0.010     +INF       
+com2.reg5      0.010     0.743     +INF       
+com2.reg6      0.010     0.314     +INF       
+com2.reg7      0.010     1.138     +INF       
+com2.reg8      0.010     1.266     +INF       
+com2.reg9      0.010     1.309     +INF       
+com2.reg10     0.010     1.184     +INF       
+com3.reg1      0.010     1.508     +INF       
+com3.reg2      0.010     0.010     +INF       
+com3.reg3      0.010     0.010     +INF       
+com3.reg4      0.010     0.177     +INF       
+com3.reg5      0.010     0.010     +INF       
+com3.reg6      0.010     1.385     +INF       
+com3.reg7      0.010     0.357     +INF       
+com3.reg8      0.010     1.299     +INF       
+com3.reg9      0.010     0.673     +INF       
+com3.reg10     0.010     0.706     +INF       
+com4.reg1      0.010     0.013     +INF       
+com4.reg2      0.010     0.010     +INF       
+com4.reg3      0.010     0.689     +INF       
+com4.reg4      0.010     0.241     +INF       
+com4.reg5      0.010     0.140     +INF       
+com4.reg6      0.010     0.574     +INF       
+com4.reg7      0.010     0.339     +INF       
+com4.reg8      0.010     1.087     +INF       
+com4.reg9      0.010     1.535     +INF       
+com4.reg10     0.010     1.646     +INF       
+com5.reg1      0.010     0.200     +INF       
+com5.reg2      0.010     0.010     +INF       
+com5.reg3      0.010     0.301     +INF       
+com5.reg4      0.010     0.010     +INF       
+com5.reg5      0.010     1.033     +INF       
+com5.reg6      0.010     0.010     +INF       
+com5.reg7      0.010     1.564     +INF       
+com5.reg8      0.010     0.569     +INF       
+com5.reg9      0.010     0.010     +INF       
+com5.reg10     0.010     2.703     +INF       
+com6.reg1      0.010     0.189     +INF       
+com6.reg2      0.010     0.010     +INF       
+com6.reg3      0.010     0.409     +INF       
+com6.reg4      0.010     0.010     +INF       
+com6.reg5      0.010     1.386     +INF       
+com6.reg6      0.010     1.063     +INF       
+com6.reg7      0.010     1.008     +INF       
+com6.reg8      0.010     1.002     +INF       
+com6.reg9      0.010     1.461     +INF       
+com6.reg10     0.010     0.010     +INF       
+
+---- VAR pe  
+
+              LOWER     LEVEL     UPPER
+
+fac1.reg1      0.010     0.435     +INF       
+fac1.reg2      0.010     0.045     +INF       
+fac1.reg3      0.010     1.189     +INF       
+fac1.reg4      0.010     1.560     +INF       
+fac1.reg5      0.010     1.932     +INF       
+fac1.reg6      0.010     2.306     +INF       
+fac1.reg7      0.010     2.683     +INF       
+fac1.reg8      0.010     3.056     +INF       
+fac1.reg9      0.010     3.445     +INF       
+fac1.reg10     0.010     3.831     +INF       
+fac2.reg1      0.010     1.899     +INF       
+fac2.reg2      0.010     0.098     +INF       
+fac2.reg3      0.010     1.668     +INF       
+fac2.reg4      0.010     1.581     +INF       
+fac2.reg5      0.010     1.501     +INF       
+fac2.reg6      0.010     1.425     +INF       
+fac2.reg7      0.010     1.350     +INF       
+fac2.reg8      0.010     1.274     +INF       
+fac2.reg9      0.010     1.204     +INF       
+fac2.reg10     0.010     1.132     +INF       
+fac3.reg1      0.010     1.763     +INF       
+fac3.reg2      0.010     0.093     +INF       
+fac3.reg3      0.010     1.604     +INF       
+fac3.reg4      0.010     1.532     +INF       
+fac3.reg5      0.010     1.462     +INF       
+fac3.reg6      0.010     1.392     +INF       
+fac3.reg7      0.010     1.323     +INF       
+fac3.reg8      0.010     1.251     +INF       
+fac3.reg9      0.010     1.185     +INF       
+fac3.reg10     0.010     1.115     +INF       
+fac4.reg1      0.010     1.659     +INF       
+fac4.reg2      0.010     0.089     +INF       
+fac4.reg3      0.010     1.548     +INF       
+fac4.reg4      0.010     1.488     +INF       
+fac4.reg5      0.010     1.426     +INF       
+fac4.reg6      0.010     1.363     +INF       
+fac4.reg7      0.010     1.298     +INF       
+fac4.reg8      0.010     1.230     +INF       
+fac4.reg9      0.010     1.167     +INF       
+fac4.reg10     0.010     1.099     +INF       
+fac5.reg1      0.010     1.576     +INF       
+fac5.reg2      0.010     0.085     +INF       
+fac5.reg3      0.010     1.500     +INF       
+fac5.reg4      0.010     1.449     +INF       
+fac5.reg5      0.010     1.394     +INF       
+fac5.reg6      0.010     1.336     +INF       
+fac5.reg7      0.010     1.275     +INF       
+fac5.reg8      0.010     1.226     +INF       
+fac5.reg9      0.010     1.149     +INF       
+fac5.reg10     0.010     1.084     +INF       
+
+---- VAR qe  
+
+                   LOWER     LEVEL     UPPER
+
+fac1.com1.reg1      0.010     0.010     +INF       
+fac1.com1.reg2      0.010     2.450     +INF       
+fac1.com1.reg3      0.010     2.041     +INF       
+fac1.com1.reg4      0.010     4.017     +INF       
+fac1.com1.reg5      0.010     1.826     +INF       
+fac1.com1.reg6      0.010     2.729     +INF       
+fac1.com1.reg7      0.010     2.493     +INF       
+fac1.com1.reg8      0.010     2.500     +INF       
+fac1.com1.reg9      0.010     3.809     +INF       
+fac1.com1.reg10     0.010     3.386     +INF       
+fac1.com2.reg1      0.010     0.010     +INF       
+fac1.com2.reg2      0.010     0.010     +INF       
+fac1.com2.reg3      0.010     0.010     +INF       
+fac1.com2.reg4      0.010     0.011     +INF       
+fac1.com2.reg5      0.010     0.825     +INF       
+fac1.com2.reg6      0.010     0.354     +INF       
+fac1.com2.reg7      0.010     1.293     +INF       
+fac1.com2.reg8      0.010     1.454     +INF       
+fac1.com2.reg9      0.010     1.494     +INF       
+fac1.com2.reg10     0.010     1.348     +INF       
+fac1.com3.reg1      0.010     1.169     +INF       
+fac1.com3.reg2      0.010     0.010     +INF       
+fac1.com3.reg3      0.010     0.010     +INF       
+fac1.com3.reg4      0.010     0.191     +INF       
+fac1.com3.reg5      0.010     0.011     +INF       
+fac1.com3.reg6      0.010     1.561     +INF       
+fac1.com3.reg7      0.010     0.406     +INF       
+fac1.com3.reg8      0.010     1.492     +INF       
+fac1.com3.reg9      0.010     0.768     +INF       
+fac1.com3.reg10     0.010     0.803     +INF       
+fac1.com4.reg1      0.010     0.010     +INF       
+fac1.com4.reg2      0.010     0.010     +INF       
+fac1.com4.reg3      0.010     0.708     +INF       
+fac1.com4.reg4      0.010     0.260     +INF       
+fac1.com4.reg5      0.010     0.155     +INF       
+fac1.com4.reg6      0.010     0.646     +INF       
+fac1.com4.reg7      0.010     0.385     +INF       
+fac1.com4.reg8      0.010     1.248     +INF       
+fac1.com4.reg9      0.010     1.751     +INF       
+fac1.com4.reg10     0.010     1.874     +INF       
+fac1.com5.reg1      0.010     0.155     +INF       
+fac1.com5.reg2      0.010     0.010     +INF       
+fac1.com5.reg3      0.010     0.310     +INF       
+fac1.com5.reg4      0.010     0.011     +INF       
+fac1.com5.reg5      0.010     1.146     +INF       
+fac1.com5.reg6      0.010     0.011     +INF       
+fac1.com5.reg7      0.010     1.778     +INF       
+fac1.com5.reg8      0.010     0.654     +INF       
+fac1.com5.reg9      0.010     0.011     +INF       
+fac1.com5.reg10     0.010     3.077     +INF       
+fac1.com6.reg1      0.010     0.146     +INF       
+fac1.com6.reg2      0.010     0.010     +INF       
+fac1.com6.reg3      0.010     0.420     +INF       
+fac1.com6.reg4      0.010     0.011     +INF       
+fac1.com6.reg5      0.010     1.538     +INF       
+fac1.com6.reg6      0.010     1.198     +INF       
+fac1.com6.reg7      0.010     1.145     +INF       
+fac1.com6.reg8      0.010     1.151     +INF       
+fac1.com6.reg9      0.010     1.667     +INF       
+fac1.com6.reg10     0.010     0.011     +INF       
+fac2.com1.reg1      0.010     0.013     +INF       
+fac2.com1.reg2      0.010     2.940     +INF       
+fac2.com1.reg3      0.010     2.333     +INF       
+fac2.com1.reg4      0.010     4.463     +INF       
+fac2.com1.reg5      0.010     1.992     +INF       
+fac2.com1.reg6      0.010     2.939     +INF       
+fac2.com1.reg7      0.010     2.659     +INF       
+fac2.com1.reg8      0.010     2.648     +INF       
+fac2.com1.reg9      0.010     4.009     +INF       
+fac2.com1.reg10     0.010     3.547     +INF       
+fac2.com2.reg1      0.010     0.013     +INF       
+fac2.com2.reg2      0.010     0.012     +INF       
+fac2.com2.reg3      0.010     0.012     +INF       
+fac2.com2.reg4      0.010     0.012     +INF       
+fac2.com2.reg5      0.010     0.900     +INF       
+fac2.com2.reg6      0.010     0.381     +INF       
+fac2.com2.reg7      0.010     1.380     +INF       
+fac2.com2.reg8      0.010     1.540     +INF       
+fac2.com2.reg9      0.010     1.573     +INF       
+fac2.com2.reg10     0.010     1.412     +INF       
+fac2.com3.reg1      0.010     1.559     +INF       
+fac2.com3.reg2      0.010     0.012     +INF       
+fac2.com3.reg3      0.010     0.012     +INF       
+fac2.com3.reg4      0.010     0.212     +INF       
+fac2.com3.reg5      0.010     0.012     +INF       
+fac2.com3.reg6      0.010     1.681     +INF       
+fac2.com3.reg7      0.010     0.433     +INF       
+fac2.com3.reg8      0.010     1.580     +INF       
+fac2.com3.reg9      0.010     0.809     +INF       
+fac2.com3.reg10     0.010     0.842     +INF       
+fac2.com4.reg1      0.010     0.013     +INF       
+fac2.com4.reg2      0.010     0.012     +INF       
+fac2.com4.reg3      0.010     0.810     +INF       
+fac2.com4.reg4      0.010     0.289     +INF       
+fac2.com4.reg5      0.010     0.169     +INF       
+fac2.com4.reg6      0.010     0.696     +INF       
+fac2.com4.reg7      0.010     0.411     +INF       
+fac2.com4.reg8      0.010     1.322     +INF       
+fac2.com4.reg9      0.010     1.843     +INF       
+fac2.com4.reg10     0.010     1.963     +INF       
+fac2.com5.reg1      0.010     0.206     +INF       
+fac2.com5.reg2      0.010     0.012     +INF       
+fac2.com5.reg3      0.010     0.354     +INF       
+fac2.com5.reg4      0.010     0.012     +INF       
+fac2.com5.reg5      0.010     1.251     +INF       
+fac2.com5.reg6      0.010     0.012     +INF       
+fac2.com5.reg7      0.010     1.896     +INF       
+fac2.com5.reg8      0.010     0.692     +INF       
+fac2.com5.reg9      0.010     0.012     +INF       
+fac2.com5.reg10     0.010     3.224     +INF       
+fac2.com6.reg1      0.010     0.195     +INF       
+fac2.com6.reg2      0.010     0.012     +INF       
+fac2.com6.reg3      0.010     0.480     +INF       
+fac2.com6.reg4      0.010     0.012     +INF       
+fac2.com6.reg5      0.010     1.677     +INF       
+fac2.com6.reg6      0.010     1.291     +INF       
+fac2.com6.reg7      0.010     1.222     +INF       
+fac2.com6.reg8      0.010     1.219     +INF       
+fac2.com6.reg9      0.010     1.755     +INF       
+fac2.com6.reg10     0.010     0.012     +INF       
+fac3.com1.reg1      0.010     0.017     +INF       
+fac3.com1.reg2      0.010     3.430     +INF       
+fac3.com1.reg3      0.010     2.624     +INF       
+fac3.com1.reg4      0.010     4.909     +INF       
+fac3.com1.reg5      0.010     2.158     +INF       
+fac3.com1.reg6      0.010     3.149     +INF       
+fac3.com1.reg7      0.010     2.825     +INF       
+fac3.com1.reg8      0.010     2.795     +INF       
+fac3.com1.reg9      0.010     4.210     +INF       
+fac3.com1.reg10     0.010     3.708     +INF       
+fac3.com2.reg1      0.010     0.017     +INF       
+fac3.com2.reg2      0.010     0.014     +INF       
+fac3.com2.reg3      0.010     0.013     +INF       
+fac3.com2.reg4      0.010     0.013     +INF       
+fac3.com2.reg5      0.010     0.975     +INF       
+fac3.com2.reg6      0.010     0.408     +INF       
+fac3.com2.reg7      0.010     1.466     +INF       
+fac3.com2.reg8      0.010     1.625     +INF       
+fac3.com2.reg9      0.010     1.651     +INF       
+fac3.com2.reg10     0.010     1.477     +INF       
+fac3.com3.reg1      0.010     1.949     +INF       
+fac3.com3.reg2      0.010     0.014     +INF       
+fac3.com3.reg3      0.010     0.013     +INF       
+fac3.com3.reg4      0.010     0.233     +INF       
+fac3.com3.reg5      0.010     0.013     +INF       
+fac3.com3.reg6      0.010     1.801     +INF       
+fac3.com3.reg7      0.010     0.460     +INF       
+fac3.com3.reg8      0.010     1.668     +INF       
+fac3.com3.reg9      0.010     0.849     +INF       
+fac3.com3.reg10     0.010     0.880     +INF       
+fac3.com4.reg1      0.010     0.017     +INF       
+fac3.com4.reg2      0.010     0.014     +INF       
+fac3.com4.reg3      0.010     0.911     +INF       
+fac3.com4.reg4      0.010     0.318     +INF       
+fac3.com4.reg5      0.010     0.183     +INF       
+fac3.com4.reg6      0.010     0.746     +INF       
+fac3.com4.reg7      0.010     0.436     +INF       
+fac3.com4.reg8      0.010     1.395     +INF       
+fac3.com4.reg9      0.010     1.935     +INF       
+fac3.com4.reg10     0.010     2.053     +INF       
+fac3.com5.reg1      0.010     0.258     +INF       
+fac3.com5.reg2      0.010     0.014     +INF       
+fac3.com5.reg3      0.010     0.398     +INF       
+fac3.com5.reg4      0.010     0.013     +INF       
+fac3.com5.reg5      0.010     1.355     +INF       
+fac3.com5.reg6      0.010     0.013     +INF       
+fac3.com5.reg7      0.010     2.015     +INF       
+fac3.com5.reg8      0.010     0.731     +INF       
+fac3.com5.reg9      0.010     0.013     +INF       
+fac3.com5.reg10     0.010     3.370     +INF       
+fac3.com6.reg1      0.010     0.244     +INF       
+fac3.com6.reg2      0.010     0.014     +INF       
+fac3.com6.reg3      0.010     0.541     +INF       
+fac3.com6.reg4      0.010     0.013     +INF       
+fac3.com6.reg5      0.010     1.817     +INF       
+fac3.com6.reg6      0.010     1.383     +INF       
+fac3.com6.reg7      0.010     1.298     +INF       
+fac3.com6.reg8      0.010     1.287     +INF       
+fac3.com6.reg9      0.010     1.842     +INF       
+fac3.com6.reg10     0.010     0.012     +INF       
+fac4.com1.reg1      0.010     0.020     +INF       
+fac4.com1.reg2      0.010     3.920     +INF       
+fac4.com1.reg3      0.010     2.916     +INF       
+fac4.com1.reg4      0.010     5.356     +INF       
+fac4.com1.reg5      0.010     2.324     +INF       
+fac4.com1.reg6      0.010     3.359     +INF       
+fac4.com1.reg7      0.010     2.991     +INF       
+fac4.com1.reg8      0.010     2.942     +INF       
+fac4.com1.reg9      0.010     4.410     +INF       
+fac4.com1.reg10     0.010     3.870     +INF       
+fac4.com2.reg1      0.010     0.020     +INF       
+fac4.com2.reg2      0.010     0.016     +INF       
+fac4.com2.reg3      0.010     0.015     +INF       
+fac4.com2.reg4      0.010     0.014     +INF       
+fac4.com2.reg5      0.010     1.049     +INF       
+fac4.com2.reg6      0.010     0.435     +INF       
+fac4.com2.reg7      0.010     1.552     +INF       
+fac4.com2.reg8      0.010     1.711     +INF       
+fac4.com2.reg9      0.010     1.730     +INF       
+fac4.com2.reg10     0.010     1.541     +INF       
+fac4.com3.reg1      0.010     2.338     +INF       
+fac4.com3.reg2      0.010     0.016     +INF       
+fac4.com3.reg3      0.010     0.015     +INF       
+fac4.com3.reg4      0.010     0.254     +INF       
+fac4.com3.reg5      0.010     0.014     +INF       
+fac4.com3.reg6      0.010     1.921     +INF       
+fac4.com3.reg7      0.010     0.487     +INF       
+fac4.com3.reg8      0.010     1.755     +INF       
+fac4.com3.reg9      0.010     0.889     +INF       
+fac4.com3.reg10     0.010     0.918     +INF       
+fac4.com4.reg1      0.010     0.020     +INF       
+fac4.com4.reg2      0.010     0.016     +INF       
+fac4.com4.reg3      0.010     1.012     +INF       
+fac4.com4.reg4      0.010     0.347     +INF       
+fac4.com4.reg5      0.010     0.197     +INF       
+fac4.com4.reg6      0.010     0.796     +INF       
+fac4.com4.reg7      0.010     0.462     +INF       
+fac4.com4.reg8      0.010     1.468     +INF       
+fac4.com4.reg9      0.010     2.027     +INF       
+fac4.com4.reg10     0.010     2.142     +INF       
+fac4.com5.reg1      0.010     0.309     +INF       
+fac4.com5.reg2      0.010     0.016     +INF       
+fac4.com5.reg3      0.010     0.442     +INF       
+fac4.com5.reg4      0.010     0.014     +INF       
+fac4.com5.reg5      0.010     1.459     +INF       
+fac4.com5.reg6      0.010     0.014     +INF       
+fac4.com5.reg7      0.010     2.133     +INF       
+fac4.com5.reg8      0.010     0.769     +INF       
+fac4.com5.reg9      0.010     0.013     +INF       
+fac4.com5.reg10     0.010     3.517     +INF       
+fac4.com6.reg1      0.010     0.292     +INF       
+fac4.com6.reg2      0.010     0.016     +INF       
+fac4.com6.reg3      0.010     0.601     +INF       
+fac4.com6.reg4      0.010     0.014     +INF       
+fac4.com6.reg5      0.010     1.957     +INF       
+fac4.com6.reg6      0.010     1.475     +INF       
+fac4.com6.reg7      0.010     1.375     +INF       
+fac4.com6.reg8      0.010     1.355     +INF       
+fac4.com6.reg9      0.010     1.930     +INF       
+fac4.com6.reg10     0.010     0.013     +INF       
+fac5.com1.reg1      0.010     0.023     +INF       
+fac5.com1.reg2      0.010     4.410     +INF       
+fac5.com1.reg3      0.010     3.207     +INF       
+fac5.com1.reg4      0.010     5.802     +INF       
+fac5.com1.reg5      0.010     2.490     +INF       
+fac5.com1.reg6      0.010     3.569     +INF       
+fac5.com1.reg7      0.010     3.158     +INF       
+fac5.com1.reg8      0.010     2.968     +INF       
+fac5.com1.reg9      0.010     4.610     +INF       
+fac5.com1.reg10     0.010     4.031     +INF       
+fac5.com2.reg1      0.010     0.023     +INF       
+fac5.com2.reg2      0.010     0.018     +INF       
+fac5.com2.reg3      0.010     0.016     +INF       
+fac5.com2.reg4      0.010     0.016     +INF       
+fac5.com2.reg5      0.010     1.124     +INF       
+fac5.com2.reg6      0.010     0.463     +INF       
+fac5.com2.reg7      0.010     1.638     +INF       
+fac5.com2.reg8      0.010     1.726     +INF       
+fac5.com2.reg9      0.010     1.809     +INF       
+fac5.com2.reg10     0.010     1.605     +INF       
+fac5.com3.reg1      0.010     2.728     +INF       
+fac5.com3.reg2      0.010     0.018     +INF       
+fac5.com3.reg3      0.010     0.016     +INF       
+fac5.com3.reg4      0.010     0.276     +INF       
+fac5.com3.reg5      0.010     0.015     +INF       
+fac5.com3.reg6      0.010     2.041     +INF       
+fac5.com3.reg7      0.010     0.514     +INF       
+fac5.com3.reg8      0.010     1.772     +INF       
+fac5.com3.reg9      0.010     0.930     +INF       
+fac5.com3.reg10     0.010     0.957     +INF       
+fac5.com4.reg1      0.010     0.023     +INF       
+fac5.com4.reg2      0.010     0.018     +INF       
+fac5.com4.reg3      0.010     1.113     +INF       
+fac5.com4.reg4      0.010     0.376     +INF       
+fac5.com4.reg5      0.010     0.211     +INF       
+fac5.com4.reg6      0.010     0.845     +INF       
+fac5.com4.reg7      0.010     0.488     +INF       
+fac5.com4.reg8      0.010     1.482     +INF       
+fac5.com4.reg9      0.010     2.120     +INF       
+fac5.com4.reg10     0.010     2.231     +INF       
+fac5.com5.reg1      0.010     0.361     +INF       
+fac5.com5.reg2      0.010     0.018     +INF       
+fac5.com5.reg3      0.010     0.486     +INF       
+fac5.com5.reg4      0.010     0.016     +INF       
+fac5.com5.reg5      0.010     1.563     +INF       
+fac5.com5.reg6      0.010     0.015     +INF       
+fac5.com5.reg7      0.010     2.252     +INF       
+fac5.com5.reg8      0.010     0.776     +INF       
+fac5.com5.reg9      0.010     0.014     +INF       
+fac5.com5.reg10     0.010     3.663     +INF       
+fac5.com6.reg1      0.010     0.341     +INF       
+fac5.com6.reg2      0.010     0.018     +INF       
+fac5.com6.reg3      0.010     0.661     +INF       
+fac5.com6.reg4      0.010     0.016     +INF       
+fac5.com6.reg5      0.010     2.097     +INF       
+fac5.com6.reg6      0.010     1.567     +INF       
+fac5.com6.reg7      0.010     1.451     +INF       
+fac5.com6.reg8      0.010     1.367     +INF       
+fac5.com6.reg9      0.010     2.018     +INF       
+fac5.com6.reg10     0.010     0.014     +INF       
+
+---- VAR y  
+
+         LOWER     LEVEL     UPPER
+
+reg1      0.010    19.350     +INF       
+reg2      0.010     1.467     +INF       
+reg3      0.010    34.040     +INF       
+reg4      0.010    41.698     +INF       
+reg5      0.010    49.571     +INF       
+reg6      0.010    57.662     +INF       
+reg7      0.010    65.972     +INF       
+reg8      0.010    74.507     +INF       
+reg9      0.010    83.260     +INF       
+reg10     0.010    92.240     +INF       
+
+---- VAR qet  
+
+              LOWER     LEVEL     UPPER
+
+fac1.reg1      1.500     1.500     1.500      
+fac1.reg2      2.500     2.500     2.500      
+fac1.reg3      3.500     3.500     3.500      
+fac1.reg4      4.500     4.500     4.500      
+fac1.reg5      5.500     5.500     5.500      
+fac1.reg6      6.500     6.500     6.500      
+fac1.reg7      7.500     7.500     7.500      
+fac1.reg8      8.500     8.500     8.500      
+fac1.reg9      9.500     9.500     9.500      
+fac1.reg10    10.500    10.500    10.500      
+fac2.reg1      2.000     2.000     2.000      
+fac2.reg2      3.000     3.000     3.000      
+fac2.reg3      4.000     4.000     4.000      
+fac2.reg4      5.000     5.000     5.000      
+fac2.reg5      6.000     6.000     6.000      
+fac2.reg6      7.000     7.000     7.000      
+fac2.reg7      8.000     8.000     8.000      
+fac2.reg8      9.000     9.000     9.000      
+fac2.reg9     10.000    10.000    10.000      
+fac2.reg10    11.000    11.000    11.000      
+fac3.reg1      2.500     2.500     2.500      
+fac3.reg2      3.500     3.500     3.500      
+fac3.reg3      4.500     4.500     4.500      
+fac3.reg4      5.500     5.500     5.500      
+fac3.reg5      6.500     6.500     6.500      
+fac3.reg6      7.500     7.500     7.500      
+fac3.reg7      8.500     8.500     8.500      
+fac3.reg8      9.500     9.500     9.500      
+fac3.reg9     10.500    10.500    10.500      
+fac3.reg10    11.500    11.500    11.500      
+fac4.reg1      3.000     3.000     3.000      
+fac4.reg2      4.000     4.000     4.000      
+fac4.reg3      5.000     5.000     5.000      
+fac4.reg4      6.000     6.000     6.000      
+fac4.reg5      7.000     7.000     7.000      
+fac4.reg6      8.000     8.000     8.000      
+fac4.reg7      9.000     9.000     9.000      
+fac4.reg8     10.000    10.000    10.000      
+fac4.reg9     11.000    11.000    11.000      
+fac4.reg10    12.000    12.000    12.000      
+fac5.reg1      3.500     3.500     3.500      
+fac5.reg2      4.500     4.500     4.500      
+fac5.reg3      5.500     5.500     5.500      
+fac5.reg4      6.500     6.500     6.500      
+fac5.reg5      7.500     7.500     7.500      
+fac5.reg6      8.500     8.500     8.500      
+fac5.reg7      9.500     9.500     9.500      
+fac5.reg8     10.500    10.500    10.500      
+fac5.reg9     11.500    11.500    11.500      
+fac5.reg10    12.500    12.500    12.500      
+
+---- VAR c  
+
+              LOWER     LEVEL     UPPER
+
+com1.reg1      0.010    10.000     +INF       
+com1.reg2      0.010     1.449     +INF       
+com1.reg3      0.010    10.000     +INF       
+com1.reg4      0.010    10.000     +INF       
+com1.reg5      0.010    10.000     +INF       
+com1.reg6      0.010    10.000     +INF       
+com1.reg7      0.010    10.000     +INF       
+com1.reg8      0.010    10.000     +INF       
+com1.reg9      0.010    10.000     +INF       
+com1.reg10     0.010    10.000     +INF       
+com2.reg1      0.010    10.000     +INF       
+com2.reg2      0.010     0.552     +INF       
+com2.reg3      0.010    10.000     +INF       
+com2.reg4      0.010    10.000     +INF       
+com2.reg5      0.010    10.000     +INF       
+com2.reg6      0.010    10.000     +INF       
+com2.reg7      0.010    10.000     +INF       
+com2.reg8      0.010    10.000     +INF       
+com2.reg9      0.010    10.000     +INF       
+com2.reg10     0.010    10.000     +INF       
+com3.reg1      0.010    10.000     +INF       
+com3.reg2      0.010     0.552     +INF       
+com3.reg3      0.010    10.000     +INF       
+com3.reg4      0.010    10.000     +INF       
+com3.reg5      0.010    10.000     +INF       
+com3.reg6      0.010    10.000     +INF       
+com3.reg7      0.010    10.000     +INF       
+com3.reg8      0.010    10.000     +INF       
+com3.reg9      0.010    10.000     +INF       
+com3.reg10     0.010    10.000     +INF       
+com4.reg1      0.010    10.000     +INF       
+com4.reg2      0.010     0.552     +INF       
+com4.reg3      0.010    10.000     +INF       
+com4.reg4      0.010    10.000     +INF       
+com4.reg5      0.010    10.000     +INF       
+com4.reg6      0.010    10.000     +INF       
+com4.reg7      0.010    10.000     +INF       
+com4.reg8      0.010    10.000     +INF       
+com4.reg9      0.010    10.000     +INF       
+com4.reg10     0.010    10.000     +INF       
+com5.reg1      0.010    10.000     +INF       
+com5.reg2      0.010     0.552     +INF       
+com5.reg3      0.010    10.000     +INF       
+com5.reg4      0.010    10.000     +INF       
+com5.reg5      0.010    10.000     +INF       
+com5.reg6      0.010    10.000     +INF       
+com5.reg7      0.010    10.000     +INF       
+com5.reg8      0.010    10.000     +INF       
+com5.reg9      0.010    10.000     +INF       
+com5.reg10     0.010    10.000     +INF       
+com6.reg1      0.010    10.000     +INF       
+com6.reg2      0.010     0.552     +INF       
+com6.reg3      0.010    10.000     +INF       
+com6.reg4      0.010    10.000     +INF       
+com6.reg5      0.010    10.000     +INF       
+com6.reg6      0.010    10.000     +INF       
+com6.reg7      0.010    10.000     +INF       
+com6.reg8      0.010    10.000     +INF       
+com6.reg9      0.010    10.000     +INF       
+com6.reg10     0.010    10.000     +INF       
+
+
+**** REPORT SUMMARY :      100 INFEASIBLE (INFES)
+                    SUM      1.864
+                    MAX      0.896
+                    MEAN     0.019
+                             0  DEPENDENT
+                             0     ERRORS
+                            84  PROJECTED
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 19:35:25 Page 10
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    219 PARAMETER alpha  
+
+             com1        com2        com3        com4        com5        com6
+
+reg1        0.060       0.188       0.188       0.188       0.188       0.188
+reg2        0.120       0.176       0.176       0.176       0.176       0.176
+reg3        0.180       0.164       0.164       0.164       0.164       0.164
+reg4        0.240       0.152       0.152       0.152       0.152       0.152
+reg5        0.300       0.140       0.140       0.140       0.140       0.140
+reg6        0.360       0.128       0.128       0.128       0.128       0.128
+reg7        0.420       0.116       0.116       0.116       0.116       0.116
+reg8        0.480       0.104       0.104       0.104       0.104       0.104
+reg9        0.540       0.092       0.092       0.092       0.092       0.092
+reg10       0.600       0.080       0.080       0.080       0.080       0.080
+
+
+----    219 PARAMETER gamma  
+
+             com1        com2        com3        com4        com5        com6
+
+reg1        0.002       0.005       0.008       0.010       0.012       0.015
+reg2        0.005       0.010       0.015       0.020       0.025       0.030
+reg3        0.007       0.015       0.022       0.030       0.037       0.045
+reg4        0.010       0.020       0.030       0.040       0.050       0.060
+reg5        0.012       0.025       0.037       0.050       0.062       0.075
+reg6        0.015       0.030       0.045       0.060       0.075       0.090
+reg7        0.017       0.035       0.052       0.070       0.088       0.105
+reg8        0.020       0.040       0.060       0.080       0.100       0.120
+reg9        0.022       0.045       0.068       0.090       0.112       0.135
+reg10       0.025       0.050       0.075       0.100       0.125       0.150
+
+
+----    219 PARAMETER alpha2  
+
+             fac1        fac2        fac3        fac4        fac5
+
+reg1        0.040       0.192       0.192       0.192       0.192
+reg2        0.080       0.184       0.184       0.184       0.184
+reg3        0.120       0.176       0.176       0.176       0.176
+reg4        0.160       0.168       0.168       0.168       0.168
+reg5        0.200       0.160       0.160       0.160       0.160
+reg6        0.240       0.152       0.152       0.152       0.152
+reg7        0.280       0.144       0.144       0.144       0.144
+reg8        0.320       0.136       0.136       0.136       0.136
+reg9        0.360       0.128       0.128       0.128       0.128
+reg10       0.400       0.120       0.120       0.120       0.120
+
+
+----    219 VARIABLE qp.L  
+
+            reg1        reg2        reg3        reg4        reg5        reg6
+
+com1       0.115       0.010       0.592       0.960       1.421       1.977
+com2       0.359       0.017       0.547       0.622       0.682       0.728
+com3       0.361       0.022       0.555       0.632       0.695       0.743
+com4       0.364       0.027       0.562       0.642       0.707       0.758
+com5       0.366       0.032       0.570       0.652       0.720       0.773
+com6       0.369       0.037       0.577       0.662       0.732       0.788
+
+   +        reg7        reg8        reg9       reg10
+
+com1       2.634       3.395       4.263       5.244
+com2       0.758       0.771       0.768       0.746
+com3       0.775       0.791       0.790       0.771
+com4       0.793       0.811       0.813       0.796
+com5       0.810       0.831       0.835       0.821
+com6       0.828       0.851       0.858       0.846
+
+
+
+EXECUTION TIME       =        2.625 SECONDS      4 MB  33.2.0 r4f23b21 WEX-WEI
+
+
+USER: Large MUD - 20 User License                    G210128/0001CA-WIN
+      U.S. Department of Agriculture, Economic Research Service  DC1080
+
+
+**** FILE SUMMARY
+
+Input      C:\Users\MAROS.IVANIC\OneDrive - USDA\JuMP-may-24\largemodel.gms
+Output     C:\Users\MAROS.IVANIC\OneDrive - USDA\JuMP-may-24\largemodel.lst

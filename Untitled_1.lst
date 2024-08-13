@@ -1,0 +1,2900 @@
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 1
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+C o m p i l a t i o n
+
+
+   1  set
+   2           reg /usa,canada,australia/
+   3           com /rice, wheat, corn/
+   4           fac /labor, capital/
+   5  ;
+   6   
+   7  *set smallreg(reg)/usa,canada/;
+   8  alias (smallreg,reg);
+   9   
+  10  alias(com,com2);
+  11   
+  12  positive variables
+  13           p(com)
+  14           qp(com,reg)
+  15           qs(com,reg)
+  16           pe(fac,reg)
+  17           qe(fac,com,reg)
+  18           y(reg)
+  19           qet(fac,reg)
+  20           pet
+  21           c(com,reg)
+  22  ;
+  23   
+  24  variable dum;
+  25   
+  26  table gamma(reg,com)
+  27            rice wheat corn
+  28  usa       0.4  0.2   0.1
+  29  canada    0.3  0.2   0.1
+  30  australia 0.1  0.2   0.3
+  31  ;
+  32   
+  33  table alpha(reg,com)
+  34            rice wheat corn
+  35  usa       0.2  0.5   0.3
+  36  canada    0.4  0.5   0.1
+  37  australia 0.4  0.5   0.1
+  38  ;
+  39   
+  40  table alpha2(reg,fac)
+  41            labor capital
+  42  usa       0.4   0.6
+  43  canada    0.5   0.5
+  44  australia 0.7   0.3
+  45  ;
+  46   
+  47  parameters
+  48           gamma2 /1/
+  49           sigma /3/
+  50  ;
+  51   
+  52   
+  53  equations
+  54           eq_demand(com,reg)
+  55           eq_market_clear(com)
+  56           eq_factor_demand(com,reg,fac)
+  57           eq_income(reg)
+  58           eq_factor_clear(fac,reg)
+  59           eq_zero_profits(com,reg)
+  60           eq_index
+  61           eq_c(com,reg)
+  62           eq_dum
+  63  ;
+  64   
+  65  eq_c(com,reg)$(not(ord(com) eq 1 and ord(reg) eq 1))..
+  66           c(com,reg) =e=  1/gamma2 * sum(fac,alpha2(reg,fac) ** (sigma) * (
+      pe(fac,reg) ** (1-sigma))) ** (1/(1-sigma));
+  67   
+  68  eq_demand(com,reg)..
+  69           qp(com,reg) =e= gamma(reg,com) + (y(reg) - sum(com2, gamma(reg,co
+      m2)*p(com2))) * alpha(reg,com)/p(com);
+  70   
+  71  eq_market_clear(com)..
+  72           sum(reg, qp(com,reg)) =e= sum(reg, qs(com,reg));
+  73   
+  74  eq_factor_demand(com,reg,fac)..
+  75           qe(fac,com,reg) =e= qs(com,reg) / gamma2 * (alpha2(reg,fac)*gamma
+      2 * c(com,reg)/pe(fac,reg)) ** sigma;
+  76   
+  77  eq_income(smallreg)..
+  78           sum(fac, qet(fac,smallreg) * pe(fac,smallreg)) =e= y(smallreg);
+  79   
+  80  eq_factor_clear(fac,reg)..
+  81           sum(com, qe(fac,com,reg))=e=qet(fac,reg);
+  82   
+  83  eq_zero_profits(com,reg)..
+  84           sum(fac, qe(fac,com,reg)*pe(fac,reg)) =e= qs(com,reg)* p(com);
+  85   
+  86  eq_index..
+  87           sum(fac,sum(reg, qet[fac,reg] * pe[fac,reg])) =e= pet;
+  88   
+  89  eq_dum..
+  90           dum =g= 0;
+  91   
+  92           p.lo(com)=0.01;
+  93           qp.lo(com,reg)=0.01;
+  94           qs.lo(com,reg)=0.01;
+  95           pe.lo(fac,reg)=0.01;
+  96           qe.lo(fac,com,reg)=0.01;
+  97           y.lo(reg)=0.01;
+  98           qet.lo(fac,reg)=0.01;
+  99           pet.lo=0.01;
+ 100           c.lo(com,reg)=0.01;
+ 101   
+ 102   
+ 103  qet.fx["labor","usa"] =  4;
+ 104  qet.fx["capital","usa"] = 2;
+ 105  qet.fx["labor","canada"] = 1;
+ 106  qet.fx["capital","canada"]=3;
+ 107  qet.fx["labor","australia"]=1;
+ 108  qet.fx["capital","australia"] = 1;
+ 109  pet.fx = 1;
+ 110   
+ 111   
+ 112  model m/
+ 113           eq_demand
+ 114           eq_market_clear
+ 115           eq_factor_demand
+ 116           eq_income
+ 117           eq_factor_clear
+ 118           eq_zero_profits
+ 119  *         eq_index
+ 120           eq_c
+ 121           eq_dum
+ 122  /;
+ 123   
+ 124  option CNS = path;
+ 125   
+      qs.fx["rice","usa"]       = 0.949710797;
+      qs.fx["wheat","usa"]       = 1.468796831;
+      qs.fx["corn","usa"]        =0.843581837  ;
+      qs.fx["rice","canada"]      =  0.788210071;
+      qs.fx["wheat","canada"]      =  0.870992865;
+      qs.fx["corn","canada"]       = 0.206822467  ;
+      qs.fx["rice","australia"]     =   1.076895486;
+      qs.fx["wheat","australia"]=        1.44746222;
+      qs.fx["corn","australia"]=        0.579950684 ;
+       
+      pe.fx["labor","usa"]        =7.226933536;
+      pe.fx["capital","usa"]        =6.81361828;
+      pe.fx["labor","canada"]        =15.12600106;
+      pe.fx["capital","canada"]        =8.733000785;
+      pe.fx["labor","australia"]        =10.84200776 ;
+      pe.fx["capital","australia"]        =25.29801812;
+ 144   
+ 145  p.l(com)=2;
+ 146  pe.l(fac,reg)=21;
+ 147  qe.l(fac,com,reg)=2;
+ 148  c.l(com,reg)=2;
+ 149  y.l(reg)=2;
+ 150  qs.l(com,reg)=21;
+ 151  qp.l(com,reg)=22;
+ 152   
+ 153  p.fx("wheat")=10;
+ 154   
+ 155   
+ 156  solve m using NLP minimizing dum;
+ 157   
+ 158  model m2/
+ 159           eq_c
+ 160           eq_demand
+ 161           eq_market_clear
+ 162           eq_factor_demand
+ 163           eq_income
+ 164           eq_factor_clear
+ 165           eq_zero_profits
+ 166  *         eq_index
+ 167  *         eq_dum
+ 168  /;
+ 169   
+ 170  solve m2 using CNS;
+ 171  qet.fx["capital","australia"] =  2;
+ 172  solve m using NLP minimizing dum;
+ 173  solve m2 using CNS;
+ 174  *qet.fx["labor","usa"] =  4;
+ 175  *solve m2 using CNS;
+ 176   
+ 177    parameter c2(com,reg);
+ 178  c2(com,reg) = 1/gamma2 * sum(fac,alpha2(reg,fac) ** (sigma) * (pe.l(fac,re
+      g) ** (1-sigma))) ** (1/(1-sigma));
+ 179  display qe.l, y.l, qp.l, c.l, c2, pe.l, alpha2, gamma2,p.l, qs.l, qet.l;
+ 180   
+ 181   
+
+
+COMPILATION TIME     =        0.000 SECONDS      3 MB  33.2.0 r4f23b21 WEX-WEI
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 2
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE m Using NLP From line 156
+
+
+---- eq_demand  =E=  
+
+eq_demand(rice,usa)..  - (0.01)*p(rice) + (0.02)*p(wheat) + (0.01)*p(corn)
+     
+      + qp(rice,usa) - (0.1)*y(usa) =E= 0.4 ; (LHS = 22.1, INFES = 21.7 ****)
+     
+eq_demand(rice,canada)..  - (0.02)*p(rice) + (0.04)*p(wheat) + (0.02)*p(corn)
+     
+      + qp(rice,canada) - (0.2)*y(canada) =E= 0.3 ;
+     
+      (LHS = 22.16, INFES = 21.86 ****)
+     
+eq_demand(rice,australia)..  - (0.06)*p(rice) + (0.04)*p(wheat) + (0.06)*p(corn)
+     
+      + qp(rice,australia) - (0.2)*y(australia) =E= 0.1 ;
+     
+      (LHS = 22.16, INFES = 22.06 ****)
+     
+REMAINING 6 ENTRIES SKIPPED
+
+
+---- eq_market_clear  =E=  
+
+eq_market_clear(rice)..  qp(rice,usa) + qp(rice,canada) + qp(rice,australia)
+     
+      - qs(rice,usa) - qs(rice,canada) - qs(rice,australia) =E= 0 ;
+     
+      (LHS = 3, INFES = 3 ****)
+     
+eq_market_clear(wheat)..  qp(wheat,usa) + qp(wheat,canada) + qp(wheat,australia)
+     
+      - qs(wheat,usa) - qs(wheat,canada) - qs(wheat,australia) =E= 0 ;
+     
+      (LHS = 3, INFES = 3 ****)
+     
+eq_market_clear(corn)..  qp(corn,usa) + qp(corn,canada) + qp(corn,australia)
+     
+      - qs(corn,usa) - qs(corn,canada) - qs(corn,australia) =E= 0 ;
+     
+      (LHS = 3, INFES = 3 ****)
+     
+
+---- eq_factor_demand  =E=  
+
+eq_factor_demand(rice,usa,labor)..  - (5.52856063060145E-5)*qs(rice,usa)
+     
+      + (0.000165856818918043)*pe(labor,usa) + qe(labor,rice,usa)
+     
+      - (0.00174149659863946)*c(rice,usa) =E= 0 ;
+     
+      (LHS = 1.99883900226757, INFES = 1.99883900226757 ****)
+     
+eq_factor_demand(rice,usa,capital)..  - (0.000186588921282799)*qs(rice,usa)
+     
+      + (0.000559766763848396)*pe(capital,usa) + qe(capital,rice,usa)
+     
+      - (0.00587755102040816)*c(rice,usa) =E= 0 ;
+     
+      (LHS = 1.99608163265306, INFES = 1.99608163265306 ****)
+     
+eq_factor_demand(rice,canada,labor)..  - (0.000107979699816434)*qs(rice,canada)
+     
+      + (0.000323939099449303)*pe(labor,canada) + qe(labor,rice,canada)
+     
+      - (0.00340136054421769)*c(rice,canada) =E= 0 ;
+     
+      (LHS = 1.99773242630385, INFES = 1.99773242630385 ****)
+     
+REMAINING 15 ENTRIES SKIPPED
+
+
+---- eq_income  =E=  
+
+eq_income(usa)..  (4)*pe(labor,usa) + (2)*pe(capital,usa) - y(usa)
+     
+      + (21)*qet(labor,usa) + (21)*qet(capital,usa) =E= 0 ;
+     
+      (LHS = 124, INFES = 124 ****)
+     
+eq_income(canada)..  (1)*pe(labor,canada) + (3)*pe(capital,canada) - y(canada)
+     
+      + (21)*qet(labor,canada) + (21)*qet(capital,canada) =E= 0 ;
+     
+      (LHS = 82, INFES = 82 ****)
+     
+eq_income(australia)..  (1)*pe(labor,australia) + (1)*pe(capital,australia)
+     
+      - y(australia) + (21)*qet(labor,australia) + (21)*qet(capital,australia)
+      =E= 0 ; (LHS = 40, INFES = 40 ****)
+     
+
+---- eq_factor_clear  =E=  
+
+eq_factor_clear(labor,usa)..  qe(labor,rice,usa) + qe(labor,wheat,usa)
+     
+      + qe(labor,corn,usa) - qet(labor,usa) =E= 0 ; (LHS = 2, INFES = 2 ****)
+     
+eq_factor_clear(labor,canada)..  qe(labor,rice,canada) + qe(labor,wheat,canada)
+     
+      + qe(labor,corn,canada) - qet(labor,canada) =E= 0 ;
+     
+      (LHS = 5, INFES = 5 ****)
+     
+eq_factor_clear(labor,australia)..  qe(labor,rice,australia)
+     
+      + qe(labor,wheat,australia) + qe(labor,corn,australia)
+     
+      - qet(labor,australia) =E= 0 ; (LHS = 5, INFES = 5 ****)
+     
+REMAINING 3 ENTRIES SKIPPED
+
+
+---- eq_zero_profits  =E=  
+
+eq_zero_profits(rice,usa)..  - (21)*p(rice) - (2)*qs(rice,usa)
+     
+      + (2)*pe(labor,usa) + (2)*pe(capital,usa) + (21)*qe(labor,rice,usa)
+     
+      + (21)*qe(capital,rice,usa) =E= 0 ; (LHS = 42, INFES = 42 ****)
+     
+eq_zero_profits(rice,canada)..  - (21)*p(rice) - (2)*qs(rice,canada)
+     
+      + (2)*pe(labor,canada) + (2)*pe(capital,canada)
+     
+      + (21)*qe(labor,rice,canada) + (21)*qe(capital,rice,canada) =E= 0 ;
+     
+      (LHS = 42, INFES = 42 ****)
+     
+eq_zero_profits(rice,australia)..  - (21)*p(rice) - (2)*qs(rice,australia)
+     
+      + (2)*pe(labor,australia) + (2)*pe(capital,australia)
+     
+      + (21)*qe(labor,rice,australia) + (21)*qe(capital,rice,australia) =E= 0 ;
+     
+      (LHS = 42, INFES = 42 ****)
+     
+REMAINING 6 ENTRIES SKIPPED
+
+
+---- eq_c  =E=  
+
+eq_c(rice,canada)..  - (1)*pe(labor,canada) - (1)*pe(capital,canada)
+     
+      + c(rice,canada) =E= 0 ; (LHS = -40, INFES = 40 ****)
+     
+eq_c(rice,australia)..  - (1.52402304447939)*pe(labor,australia)
+     
+      - (0.11996682857418)*pe(capital,australia) + c(rice,australia) =E= 0 ;
+     
+      (LHS = -32.523787334125, INFES = 32.523787334125 ****)
+     
+eq_c(wheat,usa)..  - (0.431959397724831)*pe(labor,usa)
+     
+      - (1.45786296732131)*pe(capital,usa) + c(wheat,usa) =E= 0 ;
+     
+      (LHS = -37.6862696659689, INFES = 37.6862696659689 ****)
+     
+REMAINING 5 ENTRIES SKIPPED
+
+
+---- eq_dum  =G=  
+
+eq_dum..  dum =G= 0 ; (LHS = 0)
+     
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 3
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE m Using NLP From line 156
+
+
+---- p  
+
+p(rice)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+      (-0.01)   eq_demand(rice,usa)
+      (-0.02)   eq_demand(rice,canada)
+      (-0.06)   eq_demand(rice,australia)
+       (0.02)   eq_demand(wheat,usa)
+       (0.015)  eq_demand(wheat,canada)
+       (0.005)  eq_demand(wheat,australia)
+       (0.06)   eq_demand(corn,usa)
+       (0.015)  eq_demand(corn,canada)
+       (0.005)  eq_demand(corn,australia)
+     (-21)      eq_zero_profits(rice,usa)
+     (-21)      eq_zero_profits(rice,canada)
+     (-21)      eq_zero_profits(rice,australia)
+
+p(wheat)
+                (.LO, .L, .UP, .M = 10, 10, 10, 0)
+       (0.02)   eq_demand(rice,usa)
+       (0.04)   eq_demand(rice,canada)
+       (0.04)   eq_demand(rice,australia)
+       (0.005)  eq_demand(wheat,usa)
+       (0.006)  eq_demand(wheat,canada)
+       (0.006)  eq_demand(wheat,australia)
+       (0.03)   eq_demand(corn,usa)
+       (0.01)   eq_demand(corn,canada)
+       (0.01)   eq_demand(corn,australia)
+     (-21)      eq_zero_profits(wheat,usa)
+     (-21)      eq_zero_profits(wheat,canada)
+     (-21)      eq_zero_profits(wheat,australia)
+
+p(corn)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+       (0.01)   eq_demand(rice,usa)
+       (0.02)   eq_demand(rice,canada)
+       (0.06)   eq_demand(rice,australia)
+       (0.005)  eq_demand(wheat,usa)
+       (0.005)  eq_demand(wheat,canada)
+       (0.015)  eq_demand(wheat,australia)
+      (-0.06)   eq_demand(corn,usa)
+      (-0.015)  eq_demand(corn,canada)
+      (-0.005)  eq_demand(corn,australia)
+     (-21)      eq_zero_profits(corn,usa)
+     (-21)      eq_zero_profits(corn,canada)
+     (-21)      eq_zero_profits(corn,australia)
+
+
+---- qp  
+
+qp(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 22, +INF, 0)
+        1       eq_demand(rice,usa)
+        1       eq_market_clear(rice)
+
+qp(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 22, +INF, 0)
+        1       eq_demand(rice,canada)
+        1       eq_market_clear(rice)
+
+qp(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 22, +INF, 0)
+        1       eq_demand(rice,australia)
+        1       eq_market_clear(rice)
+
+REMAINING 6 ENTRIES SKIPPED
+
+---- qs  
+
+qs(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 21, +INF, 0)
+       -1       eq_market_clear(rice)
+ (-5.528561E-5) eq_factor_demand(rice,usa,labor)
+      (-0.0002) eq_factor_demand(rice,usa,capital)
+      (-2)      eq_zero_profits(rice,usa)
+
+qs(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 21, +INF, 0)
+       -1       eq_market_clear(rice)
+      (-0.0001) eq_factor_demand(rice,canada,labor)
+      (-0.0001) eq_factor_demand(rice,canada,capital)
+      (-2)      eq_zero_profits(rice,canada)
+
+qs(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 21, +INF, 0)
+       -1       eq_market_clear(rice)
+      (-0.0003) eq_factor_demand(rice,australia,labor)
+ (-2.332362E-5) eq_factor_demand(rice,australia,capital)
+      (-2)      eq_zero_profits(rice,australia)
+
+REMAINING 6 ENTRIES SKIPPED
+
+---- pe  
+
+pe(labor,usa)
+                (.LO, .L, .UP, .M = 0.01, 21, +INF, 0)
+       (0.0002) eq_factor_demand(rice,usa,labor)
+       (0.0002) eq_factor_demand(wheat,usa,labor)
+       (0.0002) eq_factor_demand(corn,usa,labor)
+       (4)      eq_income(usa)
+       (2)      eq_zero_profits(rice,usa)
+       (2)      eq_zero_profits(wheat,usa)
+       (2)      eq_zero_profits(corn,usa)
+      (-0.432)  eq_c(wheat,usa)
+      (-0.432)  eq_c(corn,usa)
+
+pe(labor,canada)
+                (.LO, .L, .UP, .M = 0.01, 21, +INF, 0)
+       (0.0003) eq_factor_demand(rice,canada,labor)
+       (0.0003) eq_factor_demand(wheat,canada,labor)
+       (0.0003) eq_factor_demand(corn,canada,labor)
+       (1)      eq_income(canada)
+       (2)      eq_zero_profits(rice,canada)
+       (2)      eq_zero_profits(wheat,canada)
+       (2)      eq_zero_profits(corn,canada)
+      (-1)      eq_c(rice,canada)
+      (-1)      eq_c(wheat,canada)
+      (-1)      eq_c(corn,canada)
+
+pe(labor,australia)
+                (.LO, .L, .UP, .M = 0.01, 21, +INF, 0)
+       (0.0009) eq_factor_demand(rice,australia,labor)
+       (0.0009) eq_factor_demand(wheat,australia,labor)
+       (0.0009) eq_factor_demand(corn,australia,labor)
+       (1)      eq_income(australia)
+       (2)      eq_zero_profits(rice,australia)
+       (2)      eq_zero_profits(wheat,australia)
+       (2)      eq_zero_profits(corn,australia)
+      (-1.524)  eq_c(rice,australia)
+      (-1.524)  eq_c(wheat,australia)
+      (-1.524)  eq_c(corn,australia)
+
+REMAINING 3 ENTRIES SKIPPED
+
+---- qe  
+
+qe(labor,rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+        1       eq_factor_demand(rice,usa,labor)
+        1       eq_factor_clear(labor,usa)
+      (21)      eq_zero_profits(rice,usa)
+
+qe(labor,rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+        1       eq_factor_demand(rice,canada,labor)
+        1       eq_factor_clear(labor,canada)
+      (21)      eq_zero_profits(rice,canada)
+
+qe(labor,rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+        1       eq_factor_demand(rice,australia,labor)
+        1       eq_factor_clear(labor,australia)
+      (21)      eq_zero_profits(rice,australia)
+
+REMAINING 15 ENTRIES SKIPPED
+
+---- y  
+
+y(usa)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+      (-0.1)    eq_demand(rice,usa)
+      (-0.05)   eq_demand(wheat,usa)
+      (-0.15)   eq_demand(corn,usa)
+       -1       eq_income(usa)
+
+y(canada)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+      (-0.2)    eq_demand(rice,canada)
+      (-0.05)   eq_demand(wheat,canada)
+      (-0.05)   eq_demand(corn,canada)
+       -1       eq_income(canada)
+
+y(australia)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+      (-0.2)    eq_demand(rice,australia)
+      (-0.05)   eq_demand(wheat,australia)
+      (-0.05)   eq_demand(corn,australia)
+       -1       eq_income(australia)
+
+
+---- qet  
+
+qet(labor,usa)
+                (.LO, .L, .UP, .M = 4, 4, 4, 0)
+      (21)      eq_income(usa)
+       -1       eq_factor_clear(labor,usa)
+
+qet(labor,canada)
+                (.LO, .L, .UP, .M = 1, 1, 1, 0)
+      (21)      eq_income(canada)
+       -1       eq_factor_clear(labor,canada)
+
+qet(labor,australia)
+                (.LO, .L, .UP, .M = 1, 1, 1, 0)
+      (21)      eq_income(australia)
+       -1       eq_factor_clear(labor,australia)
+
+REMAINING 3 ENTRIES SKIPPED
+
+---- c  
+
+c(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+      (-0.0017) eq_factor_demand(rice,usa,labor)
+      (-0.0059) eq_factor_demand(rice,usa,capital)
+
+c(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+      (-0.0034) eq_factor_demand(rice,canada,labor)
+      (-0.0034) eq_factor_demand(rice,canada,capital)
+        1       eq_c(rice,canada)
+
+c(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 2, +INF, 0)
+      (-0.0093) eq_factor_demand(rice,australia,labor)
+      (-0.0007) eq_factor_demand(rice,australia,capital)
+        1       eq_c(rice,australia)
+
+REMAINING 6 ENTRIES SKIPPED
+
+---- dum  
+
+dum
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       eq_dum
+
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 4
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE m Using NLP From line 156
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           8     SINGLE EQUATIONS           57
+BLOCKS OF VARIABLES           9     SINGLE VARIABLES           64
+NON ZERO ELEMENTS           253     NON LINEAR N-Z            172
+CODE LENGTH                 512     CONSTANT POOL              39
+
+
+GENERATION TIME      =        0.094 SECONDS      4 MB  33.2.0 r4f23b21 WEX-WEI
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 5
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE m Using NLP From line 156
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   m                   OBJECTIVE  dum
+     TYPE    NLP                 DIRECTION  MINIMIZE
+     SOLVER  CONOPT              FROM LINE  156
+
+**** SOLVER STATUS     1 Normal Completion         
+**** MODEL STATUS      2 Locally Optimal           
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.250 10000000000.000
+ ITERATION COUNT, LIMIT       157    2147483647
+ EVALUATION ERRORS              0             0
+CONOPT 3         33.2.0 r4f23b21 Released Dec 01, 2020 WEI x86 64bit/MS Window
+ 
+ 
+    C O N O P T 3   version 3.17L
+    Copyright (C)   ARKI Consulting and Development A/S
+                    Bagsvaerdvej 246 A
+                    DK-2880 Bagsvaerd, Denmark
+ 
+ 
+                   Pre-triangular equations:   0
+                   Post-triangular equations:  1
+                   Definitional equations:     3
+ 
+ 
+ ** Optimal solution. Reduced gradient less than tolerance.
+ 
+ 
+ CONOPT time Total                            0.247 seconds
+   of which: Function evaluations             0.047 = 19.0%
+             1st Derivative evaluations       0.009 =  3.6%
+             Directional 2nd Derivative       0.000 =  0.0%
+ 
+
+---- EQU eq_demand  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa           0.400     0.400     0.400      EPS       
+rice .canada        0.300     0.300     0.300      EPS       
+rice .australia     0.100     0.100     0.100      EPS       
+wheat.usa           0.200     0.200     0.200      EPS       
+wheat.canada        0.200     0.200     0.200      EPS       
+wheat.australia     0.200     0.200     0.200      EPS       
+corn .usa           0.100     0.100     0.100      EPS       
+corn .canada        0.100     0.100     0.100      EPS       
+corn .australia     0.300     0.300     0.300      EPS       
+
+---- EQU eq_market_clear  
+
+         LOWER     LEVEL     UPPER    MARGINAL
+
+rice       .         .         .         EPS       
+wheat      .         .         .         .         
+corn       .         .         .         EPS       
+
+---- EQU eq_factor_demand  
+
+                           LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa      .labor        .         .         .         EPS       
+rice .usa      .capital      .         .         .         EPS       
+rice .canada   .labor        .         .         .         .         
+rice .canada   .capital      .         .         .         EPS       
+rice .australia.labor        .         .         .         EPS       
+rice .australia.capital      .         .         .         EPS       
+wheat.usa      .labor        .         .         .         .         
+wheat.usa      .capital      .         .         .         EPS       
+wheat.canada   .labor        .         .         .         .         
+wheat.canada   .capital      .         .         .         EPS       
+wheat.australia.labor        .         .         .         EPS       
+wheat.australia.capital      .         .         .         EPS       
+corn .usa      .labor        .         .         .         EPS       
+corn .usa      .capital      .         .         .         EPS       
+corn .canada   .labor        .         .         .         .         
+corn .canada   .capital      .         .         .         EPS       
+corn .australia.labor        .         .         .         EPS       
+corn .australia.capital      .         .         .         EPS       
+
+---- EQU eq_income  
+
+             LOWER     LEVEL     UPPER    MARGINAL
+
+usa            .         .         .         EPS       
+canada         .         .         .         EPS       
+australia      .         .         .         EPS       
+
+---- EQU eq_factor_clear  
+
+                     LOWER     LEVEL     UPPER    MARGINAL
+
+labor  .usa            .         .         .         EPS       
+labor  .canada         .         .         .         EPS       
+labor  .australia      .         .         .         EPS       
+capital.usa            .         .         .         EPS       
+capital.canada         .         .         .         EPS       
+capital.australia      .         .         .         EPS       
+
+---- EQU eq_zero_profits  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa            .         .         .         EPS       
+rice .canada         .         .         .         EPS       
+rice .australia      .         .         .         EPS       
+wheat.usa            .         .         .         EPS       
+wheat.canada         .         .         .         EPS       
+wheat.australia      .         .         .         EPS       
+corn .usa            .         .         .         EPS       
+corn .canada         .         .         .         EPS       
+corn .australia      .         .         .         EPS       
+
+---- EQU eq_c  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .canada         .         .         .         EPS       
+rice .australia      .         .         .         EPS       
+wheat.usa            .         .         .         EPS       
+wheat.canada         .         .         .         EPS       
+wheat.australia      .         .         .         EPS       
+corn .usa            .         .         .         EPS       
+corn .canada         .         .         .         EPS       
+corn .australia      .         .         .         EPS       
+
+                       LOWER     LEVEL     UPPER    MARGINAL
+
+---- EQU eq_dum          .         .        +INF      1.000      
+
+---- VAR p  
+
+         LOWER     LEVEL     UPPER    MARGINAL
+
+rice      0.010    10.000     +INF       .         
+wheat    10.000    10.000    10.000      EPS       
+corn      0.010    10.000     +INF       .         
+
+---- VAR qp  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa           0.010     0.809     +INF       .         
+rice .canada        0.010     0.824     +INF       .         
+rice .australia     0.010     0.260     +INF       .         
+wheat.usa           0.010     1.222     +INF       .         
+wheat.canada        0.010     0.856     +INF       .         
+wheat.australia     0.010     0.400     +INF       .         
+corn .usa           0.010     0.713     +INF       .         
+corn .canada        0.010     0.231     +INF       .         
+corn .australia     0.010     0.340     +INF       .         
+
+---- VAR qs  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa           0.010     1.503     +INF       .         
+rice .canada        0.010     0.372     +INF       .         
+rice .australia     0.010     0.019     +INF       EPS       
+wheat.usa           0.010     0.014     +INF       .         
+wheat.canada        0.010     1.502     +INF       .         
+wheat.australia     0.010     0.963     +INF       .         
+corn .usa           0.010     1.229     +INF       .         
+corn .canada        0.010     0.037     +INF       .         
+corn .australia     0.010     0.019     +INF       EPS       
+
+---- VAR pe  
+
+                     LOWER     LEVEL     UPPER    MARGINAL
+
+labor  .usa           0.010     3.528     +INF       .         
+labor  .canada        0.010     6.205     +INF       .         
+labor  .australia     0.010     7.000     +INF       .         
+capital.usa           0.010     6.668     +INF       .         
+capital.canada        0.010     4.302     +INF       .         
+capital.australia     0.010     3.000     +INF       .         
+
+---- VAR qe  
+
+                           LOWER     LEVEL     UPPER    MARGINAL
+
+labor  .rice .usa           0.010     2.190     +INF       .         
+labor  .rice .canada        0.010     0.195     +INF       .         
+labor  .rice .australia     0.010     0.019     +INF       .         
+labor  .wheat.usa           0.010     0.020     +INF       .         
+labor  .wheat.canada        0.010     0.786     +INF       .         
+labor  .wheat.australia     0.010     0.963     +INF       .         
+labor  .corn .usa           0.010     1.790     +INF       .         
+labor  .corn .canada        0.010     0.020     +INF       .         
+labor  .corn .australia     0.010     0.019     +INF       .         
+capital.rice .usa           0.010     1.095     +INF       .         
+capital.rice .canada        0.010     0.584     +INF       .         
+capital.rice .australia     0.010     0.019     +INF       .         
+capital.wheat.usa           0.010     0.010     +INF       EPS       
+capital.wheat.canada        0.010     2.357     +INF       .         
+capital.wheat.australia     0.010     0.963     +INF       .         
+capital.corn .usa           0.010     0.895     +INF       .         
+capital.corn .canada        0.010     0.059     +INF       EPS       
+capital.corn .australia     0.010     0.019     +INF       .         
+
+---- VAR y  
+
+             LOWER     LEVEL     UPPER    MARGINAL
+
+usa           0.010    27.448     +INF       .         
+canada        0.010    19.112     +INF       .         
+australia     0.010    10.000     +INF       .         
+
+---- VAR qet  
+
+                     LOWER     LEVEL     UPPER    MARGINAL
+
+labor  .usa           4.000     4.000     4.000      EPS       
+labor  .canada        1.000     1.000     1.000      EPS       
+labor  .australia     1.000     1.000     1.000      EPS       
+capital.usa           2.000     2.000     2.000      EPS       
+capital.canada        3.000     3.000     3.000      EPS       
+capital.australia     1.000     1.000     1.000      EPS       
+
+---- VAR c  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa           0.010    10.000     +INF       .         
+rice .canada        0.010    10.000     +INF       EPS       
+rice .australia     0.010    10.000     +INF       .         
+wheat.usa           0.010    10.000     +INF       .         
+wheat.canada        0.010    10.000     +INF       .         
+wheat.australia     0.010    10.000     +INF       .         
+corn .usa           0.010    10.000     +INF       .         
+corn .canada        0.010    10.000     +INF       .         
+corn .australia     0.010    10.000     +INF       .         
+
+                       LOWER     LEVEL     UPPER    MARGINAL
+
+---- VAR dum            -INF       .        +INF       .         
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+                             0     ERRORS
+                             5  PROJECTED
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 6
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE m2 Using CNS From line 170
+
+
+---- eq_c  =E=  
+
+eq_c(rice,canada)..  - (0.523240304598563)*pe(labor,canada)
+     
+      - (1.56972091385446)*pe(capital,canada) + c(rice,canada) =E= 0 ;
+     
+      (LHS = -3.32498473198939E-11, INFES = 3.32498473198939E-11 ****)
+     
+eq_c(rice,australia)..  - (1)*pe(labor,australia) - (1)*pe(capital,australia)
+     
+      + c(rice,australia) =E= 0 ; (LHS = 0)
+     
+eq_c(wheat,usa)..  - (1.45730493963037)*pe(labor,usa)
+     
+      - (0.728652469815185)*pe(capital,usa) + c(wheat,usa) =E= 0 ; (LHS = 0)
+     
+REMAINING 5 ENTRIES SKIPPED
+
+
+---- eq_demand  =E=  
+
+eq_demand(rice,usa)..  (0.0488958545493513)*p(rice) + (0.004)*p(wheat)
+     
+      + (0.002)*p(corn) + qp(rice,usa) - (0.02)*y(usa) =E= 0.4 ; (LHS = 0.4)
+     
+eq_demand(rice,canada)..  (0.0644467103307433)*p(rice) + (0.008)*p(wheat)
+     
+      + (0.004)*p(corn) + qp(rice,canada) - (0.04)*y(canada) =E= 0.3 ;
+     
+      (LHS = 0.3)
+     
+eq_demand(rice,australia)..  (0.02)*p(rice) + (0.008)*p(wheat) + (0.012)*p(corn)
+     
+      + qp(rice,australia) - (0.04)*y(australia) =E= 0.1 ; (LHS = 0.1)
+     
+REMAINING 6 ENTRIES SKIPPED
+
+
+---- eq_market_clear  =E=  
+
+eq_market_clear(rice)..  qp(rice,usa) + qp(rice,canada) + qp(rice,australia)
+     
+      - qs(rice,usa) - qs(rice,canada) - qs(rice,australia) =E= 0 ; (LHS = 0)
+     
+eq_market_clear(wheat)..  qp(wheat,usa) + qp(wheat,canada) + qp(wheat,australia)
+     
+      - qs(wheat,usa) - qs(wheat,canada) - qs(wheat,australia) =E= 0 ; (LHS = 0)
+     
+eq_market_clear(corn)..  qp(corn,usa) + qp(corn,canada) + qp(corn,australia)
+     
+      - qs(corn,usa) - qs(corn,canada) - qs(corn,australia) =E= 0 ; (LHS = 0)
+     
+
+---- eq_factor_demand  =E=  
+
+eq_factor_demand(rice,usa,labor)..  - (1.45730493963037)*qs(rice,usa)
+     
+      + (1.86192330655015)*pe(labor,usa) + qe(labor,rice,usa)
+     
+      - (0.656908629812001)*c(rice,usa) =E= 0 ; (LHS = 0)
+     
+eq_factor_demand(rice,usa,capital)..  - (0.728652469815184)*qs(rice,usa)
+     
+      + (0.492603169250303)*pe(capital,usa) + qe(capital,rice,usa)
+     
+      - (0.328454314906)*c(rice,usa) =E= 0 ; (LHS = 0)
+     
+eq_factor_demand(rice,canada,labor)..  - (0.523240304593343)*qs(rice,canada)
+     
+      + (0.0941552191462323)*pe(labor,canada) + qe(labor,rice,canada)
+     
+      - (0.0584225720612637)*c(rice,canada) =E= 0 ;
+     
+      (LHS = 2.25325313962799E-12, INFES = 2.25325313962799E-12 ****)
+     
+REMAINING 15 ENTRIES SKIPPED
+
+
+---- eq_income  =E=  
+
+eq_income(usa)..  (4)*pe(labor,usa) + (2)*pe(capital,usa) - y(usa)
+     
+      + (3.52811862605205)*qet(labor,usa) + (6.66772638523373)*qet(capital,usa)
+      =E= 0 ; (LHS = 0)
+     
+eq_income(canada)..  (1)*pe(labor,canada) + (3)*pe(capital,canada) - y(canada)
+     
+      + (6.20492125565274)*qet(labor,canada)
+     
+      + (4.30225210901103)*qet(capital,canada) =E= 0 ; (LHS = 0)
+     
+eq_income(australia)..  (1)*pe(labor,australia) + (1)*pe(capital,australia)
+     
+      - y(australia) + (7)*qet(labor,australia) + (3)*qet(capital,australia)
+      =E= 0 ; (LHS = 0)
+     
+
+---- eq_factor_clear  =E=  
+
+eq_factor_clear(labor,usa)..  qe(labor,rice,usa) + qe(labor,wheat,usa)
+     
+      + qe(labor,corn,usa) - qet(labor,usa) =E= 0 ; (LHS = 0)
+     
+eq_factor_clear(labor,canada)..  qe(labor,rice,canada) + qe(labor,wheat,canada)
+     
+      + qe(labor,corn,canada) - qet(labor,canada) =E= 0 ; (LHS = 0)
+     
+eq_factor_clear(labor,australia)..  qe(labor,rice,australia)
+     
+      + qe(labor,wheat,australia) + qe(labor,corn,australia)
+     
+      - qet(labor,australia) =E= 0 ; (LHS = 0)
+     
+REMAINING 3 ENTRIES SKIPPED
+
+
+---- eq_zero_profits  =E=  
+
+eq_zero_profits(rice,usa)..  - (1.50256502476555)*p(rice) - (10)*qs(rice,usa)
+     
+      + (2.18969543270667)*pe(labor,usa) + (1.09484771635334)*pe(capital,usa)
+     
+      + (3.52811862605205)*qe(labor,rice,usa)
+     
+      + (6.66772638523373)*qe(capital,rice,usa) =E= 0 ; (LHS = 0)
+     
+eq_zero_profits(rice,canada)..  - (0.372184453607253)*p(rice)
+     
+      - (10)*qs(rice,canada) + (0.194741906872619)*pe(labor,canada)
+     
+      + (0.584225720636079)*pe(capital,canada)
+     
+      + (6.20492125565274)*qe(labor,rice,canada)
+     
+      + (4.30225210901103)*qe(capital,rice,canada) =E= 0 ;
+     
+      (LHS = -7.21067650033547E-12, INFES = 7.21067650033547E-12 ****)
+     
+eq_zero_profits(rice,australia)..  - (0.0186761704281388)*p(rice)
+     
+      - (10)*qs(rice,australia) + (0.0186761704281388)*pe(labor,australia)
+     
+      + (0.0186761704281388)*pe(capital,australia)
+     
+      + (7)*qe(labor,rice,australia) + (3)*qe(capital,rice,australia) =E= 0 ;
+     
+      (LHS = 0)
+     
+REMAINING 6 ENTRIES SKIPPED
+
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 7
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE m2 Using CNS From line 170
+
+
+---- p  
+
+p(rice)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+       (0.0489) eq_demand(rice,usa)
+       (0.0644) eq_demand(rice,canada)
+       (0.02)   eq_demand(rice,australia)
+       (0.02)   eq_demand(wheat,usa)
+       (0.015)  eq_demand(wheat,canada)
+       (0.005)  eq_demand(wheat,australia)
+       (0.012)  eq_demand(corn,usa)
+       (0.003)  eq_demand(corn,canada)
+       (0.001)  eq_demand(corn,australia)
+      (-1.5026) eq_zero_profits(rice,usa)
+      (-0.3722) eq_zero_profits(rice,canada)
+      (-0.0187) eq_zero_profits(rice,australia)
+
+p(wheat)
+                (.LO, .L, .UP, .M = 10, 10, 10, EPS)
+       (0.004)  eq_demand(rice,usa)
+       (0.008)  eq_demand(rice,canada)
+       (0.008)  eq_demand(rice,australia)
+       (0.1122) eq_demand(wheat,usa)
+       (0.0756) eq_demand(wheat,canada)
+       (0.03)   eq_demand(wheat,australia)
+       (0.006)  eq_demand(corn,usa)
+       (0.002)  eq_demand(corn,canada)
+       (0.002)  eq_demand(corn,australia)
+      (-0.0137) eq_zero_profits(wheat,usa)
+      (-1.5016) eq_zero_profits(wheat,canada)
+      (-0.9626) eq_zero_profits(wheat,australia)
+
+p(corn)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+       (0.002)  eq_demand(rice,usa)
+       (0.004)  eq_demand(rice,canada)
+       (0.012)  eq_demand(rice,australia)
+       (0.005)  eq_demand(wheat,usa)
+       (0.005)  eq_demand(wheat,canada)
+       (0.015)  eq_demand(wheat,australia)
+       (0.0643) eq_demand(corn,usa)
+       (0.0141) eq_demand(corn,canada)
+       (0.007)  eq_demand(corn,australia)
+      (-1.2285) eq_zero_profits(corn,usa)
+      (-0.0374) eq_zero_profits(corn,canada)
+      (-0.0187) eq_zero_profits(corn,australia)
+
+
+---- qp  
+
+qp(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 0.808958545493513, +INF, 0)
+        1       eq_demand(rice,usa)
+        1       eq_market_clear(rice)
+
+qp(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 0.824467103307433, +INF, 0)
+        1       eq_demand(rice,canada)
+        1       eq_market_clear(rice)
+
+qp(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 0.26, +INF, 0)
+        1       eq_demand(rice,australia)
+        1       eq_market_clear(rice)
+
+REMAINING 6 ENTRIES SKIPPED
+
+---- qs  
+
+qs(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 1.50256502476555, +INF, 0)
+       -1       eq_market_clear(rice)
+      (-1.4573) eq_factor_demand(rice,usa,labor)
+      (-0.7287) eq_factor_demand(rice,usa,capital)
+     (-10)      eq_zero_profits(rice,usa)
+
+qs(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 0.372184453607253, +INF, 0)
+       -1       eq_market_clear(rice)
+      (-0.5232) eq_factor_demand(rice,canada,labor)
+      (-1.5697) eq_factor_demand(rice,canada,capital)
+     (-10)      eq_zero_profits(rice,canada)
+
+qs(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 0.0186761704281388, +INF, EPS)
+       -1       eq_market_clear(rice)
+      (-1)      eq_factor_demand(rice,australia,labor)
+      (-1)      eq_factor_demand(rice,australia,capital)
+     (-10)      eq_zero_profits(rice,australia)
+
+REMAINING 6 ENTRIES SKIPPED
+
+---- pe  
+
+pe(labor,usa)
+                (.LO, .L, .UP, .M = 0.01, 3.52811862605205, +INF, 0)
+      (-1.4573) eq_c(wheat,usa)
+      (-1.4573) eq_c(corn,usa)
+       (1.8619) eq_factor_demand(rice,usa,labor)
+       (0.017)  eq_factor_demand(wheat,usa,labor)
+       (1.5223) eq_factor_demand(corn,usa,labor)
+       (4)      eq_income(usa)
+       (2.1897) eq_zero_profits(rice,usa)
+       (0.02)   eq_zero_profits(wheat,usa)
+       (1.7903) eq_zero_profits(corn,usa)
+
+pe(labor,canada)
+                (.LO, .L, .UP, .M = 0.01, 6.20492125565274, +INF, 0)
+      (-0.5232) eq_c(rice,canada)
+      (-0.5232) eq_c(wheat,canada)
+      (-0.5232) eq_c(corn,canada)
+       (0.0942) eq_factor_demand(rice,canada,labor)
+       (0.3799) eq_factor_demand(wheat,canada,labor)
+       (0.0095) eq_factor_demand(corn,canada,labor)
+       (1)      eq_income(canada)
+       (0.1947) eq_zero_profits(rice,canada)
+       (0.7857) eq_zero_profits(wheat,canada)
+       (0.0196) eq_zero_profits(corn,canada)
+
+pe(labor,australia)
+                (.LO, .L, .UP, .M = 0.01, 7, +INF, 0)
+      (-1)      eq_c(rice,australia)
+      (-1)      eq_c(wheat,australia)
+      (-1)      eq_c(corn,australia)
+       (0.008)  eq_factor_demand(rice,australia,labor)
+       (0.4126) eq_factor_demand(wheat,australia,labor)
+       (0.008)  eq_factor_demand(corn,australia,labor)
+       (1)      eq_income(australia)
+       (0.0187) eq_zero_profits(rice,australia)
+       (0.9626) eq_zero_profits(wheat,australia)
+       (0.0187) eq_zero_profits(corn,australia)
+
+REMAINING 3 ENTRIES SKIPPED
+
+---- qe  
+
+qe(labor,rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 2.18969543270667, +INF, 0)
+        1       eq_factor_demand(rice,usa,labor)
+        1       eq_factor_clear(labor,usa)
+       (3.5281) eq_zero_profits(rice,usa)
+
+qe(labor,rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 0.194741906872619, +INF, 0)
+        1       eq_factor_demand(rice,canada,labor)
+        1       eq_factor_clear(labor,canada)
+       (6.2049) eq_zero_profits(rice,canada)
+
+qe(labor,rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 0.0186761704281388, +INF, 0)
+        1       eq_factor_demand(rice,australia,labor)
+        1       eq_factor_clear(labor,australia)
+       (7)      eq_zero_profits(rice,australia)
+
+REMAINING 15 ENTRIES SKIPPED
+
+---- y  
+
+y(usa)
+                (.LO, .L, .UP, .M = 0.01, 27.4479272746757, +INF, 0)
+      (-0.02)   eq_demand(rice,usa)
+      (-0.05)   eq_demand(wheat,usa)
+      (-0.03)   eq_demand(corn,usa)
+       -1       eq_income(usa)
+
+y(canada)
+                (.LO, .L, .UP, .M = 0.01, 19.1116775826858, +INF, 0)
+      (-0.04)   eq_demand(rice,canada)
+      (-0.05)   eq_demand(wheat,canada)
+      (-0.01)   eq_demand(corn,canada)
+       -1       eq_income(canada)
+
+y(australia)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+      (-0.04)   eq_demand(rice,australia)
+      (-0.05)   eq_demand(wheat,australia)
+      (-0.01)   eq_demand(corn,australia)
+       -1       eq_income(australia)
+
+
+---- qet  
+
+qet(labor,usa)
+                (.LO, .L, .UP, .M = 4, 4, 4, EPS)
+       (3.5281) eq_income(usa)
+       -1       eq_factor_clear(labor,usa)
+
+qet(labor,canada)
+                (.LO, .L, .UP, .M = 1, 1, 1, EPS)
+       (6.2049) eq_income(canada)
+       -1       eq_factor_clear(labor,canada)
+
+qet(labor,australia)
+                (.LO, .L, .UP, .M = 1, 1, 1, EPS)
+       (7)      eq_income(australia)
+       -1       eq_factor_clear(labor,australia)
+
+REMAINING 3 ENTRIES SKIPPED
+
+---- c  
+
+c(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+      (-0.6569) eq_factor_demand(rice,usa,labor)
+      (-0.3285) eq_factor_demand(rice,usa,capital)
+
+c(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 9.99999999997368, +INF, EPS)
+        1       eq_c(rice,canada)
+      (-0.0584) eq_factor_demand(rice,canada,labor)
+      (-0.1753) eq_factor_demand(rice,canada,capital)
+
+c(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+        1       eq_c(rice,australia)
+      (-0.0056) eq_factor_demand(rice,australia,labor)
+      (-0.0056) eq_factor_demand(rice,australia,capital)
+
+REMAINING 6 ENTRIES SKIPPED
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 8
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE m2 Using CNS From line 170
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS           56
+BLOCKS OF VARIABLES           8     SINGLE VARIABLES           63
+NON ZERO ELEMENTS           252     NON LINEAR N-Z            172
+CODE LENGTH                 513     CONSTANT POOL              39
+SINGLE =E|X= EQUS            56     SINGLE UNFIXED VARS        56
+
+
+GENERATION TIME      =        0.031 SECONDS      4 MB  33.2.0 r4f23b21 WEX-WEI
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 9
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE m2 Using CNS From line 170
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   m2                  
+     TYPE    CNS                 
+     SOLVER  PATH                FROM LINE  170
+
+**** SOLVER STATUS     1 Normal Completion         
+**** MODEL STATUS      16 Solved                   
+
+ RESOURCE USAGE, LIMIT          0.078 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+ EVALUATION ERRORS              0             0
+56 row/cols, 228 non-zeros, 7.27% dense.
+
+Path 5.0.02 (Tue Dec  1 17:26:19 2020)
+Written by Todd Munson, Steven Dirkse, Youngdae Kim, and Michael Ferris
+
+INITIAL POINT STATISTICS
+Maximum of X. . . . . . . . . .  2.7448e+01 var: (y(usa))
+Maximum of F. . . . . . . . . .  3.3250e-11 eqn: (eq_c(rice,canada))
+Maximum of Grad F . . . . . . .  1.0000e+01 eqn: (eq_zero_profits(rice,usa))
+                                            var: (qs(rice,usa))
+
+INITIAL JACOBIAN NORM STATISTICS
+Maximum Row Norm. . . . . . . .  2.4983e+01 eqn: (eq_zero_profits(rice,usa))
+Minimum Row Norm. . . . . . . .  1.0000e+00 eqn: (s(1))
+Maximum Column Norm . . . . . .  1.4316e+01 var: (pe(labor,usa))
+Minimum Column Norm . . . . . .  9.8536e-01 var: (c(rice,usa))
+
+FINAL STATISTICS
+Inf-Norm of Complementarity . .  3.3250e-11 eqn: (eq_c(rice,canada))
+Inf-Norm of Normal Map. . . . .  3.3250e-11 eqn: (eq_c(rice,canada))
+Inf-Norm of Minimum Map . . . .  3.3250e-11 eqn: (eq_c(rice,canada))
+Inf-Norm of Fischer Function. .  3.3250e-11 eqn: (eq_c(rice,canada))
+Inf-Norm of Grad Fischer Fcn. .  1.5163e-10 eqn: (s(25))
+Two-Norm of Grad Fischer Fcn. .  2.2174e-10
+
+FINAL POINT STATISTICS
+Maximum of X. . . . . . . . . .  2.7448e+01 var: (y(usa))
+Maximum of F. . . . . . . . . .  3.3250e-11 eqn: (eq_c(rice,canada))
+Maximum of Grad F . . . . . . .  1.0000e+01 eqn: (eq_zero_profits(rice,usa))
+                                            var: (qs(rice,usa))
+
+
+---- EQU eq_c  
+
+                   LOWER     LEVEL     UPPER
+
+rice .canada         .         .         .         
+rice .australia      .         .         .         
+wheat.usa            .         .         .         
+wheat.canada         .         .         .         
+wheat.australia      .         .         .         
+corn .usa            .         .         .         
+corn .canada         .         .         .         
+corn .australia      .         .         .         
+
+---- EQU eq_demand  
+
+                   LOWER     LEVEL     UPPER
+
+rice .usa           0.400     0.400     0.400      
+rice .canada        0.300     0.300     0.300      
+rice .australia     0.100     0.100     0.100      
+wheat.usa           0.200     0.200     0.200      
+wheat.canada        0.200     0.200     0.200      
+wheat.australia     0.200     0.200     0.200      
+corn .usa           0.100     0.100     0.100      
+corn .canada        0.100     0.100     0.100      
+corn .australia     0.300     0.300     0.300      
+
+---- EQU eq_market_clear  
+
+         LOWER     LEVEL     UPPER
+
+rice       .         .         .         
+wheat      .         .         .         
+corn       .         .         .         
+
+---- EQU eq_factor_demand  
+
+                           LOWER     LEVEL     UPPER
+
+rice .usa      .labor        .         .         .         
+rice .usa      .capital      .         .         .         
+rice .canada   .labor        .         .         .         
+rice .canada   .capital      .         .         .         
+rice .australia.labor        .         .         .         
+rice .australia.capital      .         .         .         
+wheat.usa      .labor        .         .         .         
+wheat.usa      .capital      .         .         .         
+wheat.canada   .labor        .         .         .         
+wheat.canada   .capital      .         .         .         
+wheat.australia.labor        .         .         .         
+wheat.australia.capital      .         .         .         
+corn .usa      .labor        .         .         .         
+corn .usa      .capital      .         .         .         
+corn .canada   .labor        .         .         .         
+corn .canada   .capital      .         .         .         
+corn .australia.labor        .         .         .         
+corn .australia.capital      .         .         .         
+
+---- EQU eq_income  
+
+             LOWER     LEVEL     UPPER
+
+usa            .         .         .         
+canada         .         .         .         
+australia      .         .         .         
+
+---- EQU eq_factor_clear  
+
+                     LOWER     LEVEL     UPPER
+
+labor  .usa            .         .         .         
+labor  .canada         .         .         .         
+labor  .australia      .         .         .         
+capital.usa            .         .         .         
+capital.canada         .         .         .         
+capital.australia      .         .         .         
+
+---- EQU eq_zero_profits  
+
+                   LOWER     LEVEL     UPPER
+
+rice .usa            .         .         .         
+rice .canada         .         .         .         
+rice .australia      .         .         .         
+wheat.usa            .         .         .         
+wheat.canada         .         .         .         
+wheat.australia      .         .         .         
+corn .usa            .         .         .         
+corn .canada         .         .         .         
+corn .australia      .         .         .         
+
+---- VAR p  
+
+         LOWER     LEVEL     UPPER
+
+rice      0.010    10.000     +INF       
+wheat    10.000    10.000    10.000      
+corn      0.010    10.000     +INF       
+
+---- VAR qp  
+
+                   LOWER     LEVEL     UPPER
+
+rice .usa           0.010     0.809     +INF       
+rice .canada        0.010     0.824     +INF       
+rice .australia     0.010     0.260     +INF       
+wheat.usa           0.010     1.222     +INF       
+wheat.canada        0.010     0.856     +INF       
+wheat.australia     0.010     0.400     +INF       
+corn .usa           0.010     0.713     +INF       
+corn .canada        0.010     0.231     +INF       
+corn .australia     0.010     0.340     +INF       
+
+---- VAR qs  
+
+                   LOWER     LEVEL     UPPER
+
+rice .usa           0.010     1.503     +INF       
+rice .canada        0.010     0.372     +INF       
+rice .australia     0.010     0.019     +INF       
+wheat.usa           0.010     0.014     +INF       
+wheat.canada        0.010     1.502     +INF       
+wheat.australia     0.010     0.963     +INF       
+corn .usa           0.010     1.229     +INF       
+corn .canada        0.010     0.037     +INF       
+corn .australia     0.010     0.019     +INF       
+
+---- VAR pe  
+
+                     LOWER     LEVEL     UPPER
+
+labor  .usa           0.010     3.528     +INF       
+labor  .canada        0.010     6.205     +INF       
+labor  .australia     0.010     7.000     +INF       
+capital.usa           0.010     6.668     +INF       
+capital.canada        0.010     4.302     +INF       
+capital.australia     0.010     3.000     +INF       
+
+---- VAR qe  
+
+                           LOWER     LEVEL     UPPER
+
+labor  .rice .usa           0.010     2.190     +INF       
+labor  .rice .canada        0.010     0.195     +INF       
+labor  .rice .australia     0.010     0.019     +INF       
+labor  .wheat.usa           0.010     0.020     +INF       
+labor  .wheat.canada        0.010     0.786     +INF       
+labor  .wheat.australia     0.010     0.963     +INF       
+labor  .corn .usa           0.010     1.790     +INF       
+labor  .corn .canada        0.010     0.020     +INF       
+labor  .corn .australia     0.010     0.019     +INF       
+capital.rice .usa           0.010     1.095     +INF       
+capital.rice .canada        0.010     0.584     +INF       
+capital.rice .australia     0.010     0.019     +INF       
+capital.wheat.usa           0.010     0.010     +INF       
+capital.wheat.canada        0.010     2.357     +INF       
+capital.wheat.australia     0.010     0.963     +INF       
+capital.corn .usa           0.010     0.895     +INF       
+capital.corn .canada        0.010     0.059     +INF       
+capital.corn .australia     0.010     0.019     +INF       
+
+---- VAR y  
+
+             LOWER     LEVEL     UPPER
+
+usa           0.010    27.448     +INF       
+canada        0.010    19.112     +INF       
+australia     0.010    10.000     +INF       
+
+---- VAR qet  
+
+                     LOWER     LEVEL     UPPER
+
+labor  .usa           4.000     4.000     4.000      
+labor  .canada        1.000     1.000     1.000      
+labor  .australia     1.000     1.000     1.000      
+capital.usa           2.000     2.000     2.000      
+capital.canada        3.000     3.000     3.000      
+capital.australia     1.000     1.000     1.000      
+
+---- VAR c  
+
+                   LOWER     LEVEL     UPPER
+
+rice .usa           0.010    10.000     +INF       
+rice .canada        0.010    10.000     +INF       
+rice .australia     0.010    10.000     +INF       
+wheat.usa           0.010    10.000     +INF       
+wheat.canada        0.010    10.000     +INF       
+wheat.australia     0.010    10.000     +INF       
+corn .usa           0.010    10.000     +INF       
+corn .canada        0.010    10.000     +INF       
+corn .australia     0.010    10.000     +INF       
+
+
+**** REPORT SUMMARY :        0 INFEASIBLE
+                             0  DEPENDENT
+                             0     ERRORS
+                            40  PROJECTED
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 10
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE m Using NLP From line 172
+
+
+---- eq_demand  =E=  
+
+eq_demand(rice,usa)..  (0.0488958545493513)*p(rice) + (0.004)*p(wheat)
+     
+      + (0.002)*p(corn) + qp(rice,usa) - (0.02)*y(usa) =E= 0.4 ; (LHS = 0.4)
+     
+eq_demand(rice,canada)..  (0.0644467103307433)*p(rice) + (0.008)*p(wheat)
+     
+      + (0.004)*p(corn) + qp(rice,canada) - (0.04)*y(canada) =E= 0.3 ;
+     
+      (LHS = 0.3)
+     
+eq_demand(rice,australia)..  (0.02)*p(rice) + (0.008)*p(wheat) + (0.012)*p(corn)
+     
+      + qp(rice,australia) - (0.04)*y(australia) =E= 0.1 ; (LHS = 0.1)
+     
+REMAINING 6 ENTRIES SKIPPED
+
+
+---- eq_market_clear  =E=  
+
+eq_market_clear(rice)..  qp(rice,usa) + qp(rice,canada) + qp(rice,australia)
+     
+      - qs(rice,usa) - qs(rice,canada) - qs(rice,australia) =E= 0 ; (LHS = 0)
+     
+eq_market_clear(wheat)..  qp(wheat,usa) + qp(wheat,canada) + qp(wheat,australia)
+     
+      - qs(wheat,usa) - qs(wheat,canada) - qs(wheat,australia) =E= 0 ; (LHS = 0)
+     
+eq_market_clear(corn)..  qp(corn,usa) + qp(corn,canada) + qp(corn,australia)
+     
+      - qs(corn,usa) - qs(corn,canada) - qs(corn,australia) =E= 0 ; (LHS = 0)
+     
+
+---- eq_factor_demand  =E=  
+
+eq_factor_demand(rice,usa,labor)..  - (1.45730493963037)*qs(rice,usa)
+     
+      + (1.86192330655015)*pe(labor,usa) + qe(labor,rice,usa)
+     
+      - (0.656908629812001)*c(rice,usa) =E= 0 ; (LHS = 0)
+     
+eq_factor_demand(rice,usa,capital)..  - (0.728652469815184)*qs(rice,usa)
+     
+      + (0.492603169250303)*pe(capital,usa) + qe(capital,rice,usa)
+     
+      - (0.328454314906)*c(rice,usa) =E= 0 ; (LHS = 0)
+     
+eq_factor_demand(rice,canada,labor)..  - (0.523240304593343)*qs(rice,canada)
+     
+      + (0.0941552191462323)*pe(labor,canada) + qe(labor,rice,canada)
+     
+      - (0.0584225720612637)*c(rice,canada) =E= 0 ;
+     
+      (LHS = 2.25325313962799E-12, INFES = 2.25325313962799E-12 ****)
+     
+REMAINING 15 ENTRIES SKIPPED
+
+
+---- eq_income  =E=  
+
+eq_income(usa)..  (4)*pe(labor,usa) + (2)*pe(capital,usa) - y(usa)
+     
+      + (3.52811862605205)*qet(labor,usa) + (6.66772638523373)*qet(capital,usa)
+      =E= 0 ; (LHS = 0)
+     
+eq_income(canada)..  (1)*pe(labor,canada) + (3)*pe(capital,canada) - y(canada)
+     
+      + (6.20492125565274)*qet(labor,canada)
+     
+      + (4.30225210901103)*qet(capital,canada) =E= 0 ; (LHS = 0)
+     
+eq_income(australia)..  (1)*pe(labor,australia) + (2)*pe(capital,australia)
+     
+      - y(australia) + (7)*qet(labor,australia) + (3)*qet(capital,australia)
+      =E= 0 ; (LHS = 3, INFES = 3 ****)
+     
+
+---- eq_factor_clear  =E=  
+
+eq_factor_clear(labor,usa)..  qe(labor,rice,usa) + qe(labor,wheat,usa)
+     
+      + qe(labor,corn,usa) - qet(labor,usa) =E= 0 ; (LHS = 0)
+     
+eq_factor_clear(labor,canada)..  qe(labor,rice,canada) + qe(labor,wheat,canada)
+     
+      + qe(labor,corn,canada) - qet(labor,canada) =E= 0 ; (LHS = 0)
+     
+eq_factor_clear(labor,australia)..  qe(labor,rice,australia)
+     
+      + qe(labor,wheat,australia) + qe(labor,corn,australia)
+     
+      - qet(labor,australia) =E= 0 ; (LHS = 0)
+     
+REMAINING 3 ENTRIES SKIPPED
+
+
+---- eq_zero_profits  =E=  
+
+eq_zero_profits(rice,usa)..  - (1.50256502476555)*p(rice) - (10)*qs(rice,usa)
+     
+      + (2.18969543270667)*pe(labor,usa) + (1.09484771635334)*pe(capital,usa)
+     
+      + (3.52811862605205)*qe(labor,rice,usa)
+     
+      + (6.66772638523373)*qe(capital,rice,usa) =E= 0 ; (LHS = 0)
+     
+eq_zero_profits(rice,canada)..  - (0.372184453607253)*p(rice)
+     
+      - (10)*qs(rice,canada) + (0.194741906872619)*pe(labor,canada)
+     
+      + (0.584225720636079)*pe(capital,canada)
+     
+      + (6.20492125565274)*qe(labor,rice,canada)
+     
+      + (4.30225210901103)*qe(capital,rice,canada) =E= 0 ;
+     
+      (LHS = -7.21067650033547E-12, INFES = 7.21067650033547E-12 ****)
+     
+eq_zero_profits(rice,australia)..  - (0.0186761704281388)*p(rice)
+     
+      - (10)*qs(rice,australia) + (0.0186761704281388)*pe(labor,australia)
+     
+      + (0.0186761704281388)*pe(capital,australia)
+     
+      + (7)*qe(labor,rice,australia) + (3)*qe(capital,rice,australia) =E= 0 ;
+     
+      (LHS = 0)
+     
+REMAINING 6 ENTRIES SKIPPED
+
+
+---- eq_c  =E=  
+
+eq_c(rice,canada)..  - (0.523240304598563)*pe(labor,canada)
+     
+      - (1.56972091385446)*pe(capital,canada) + c(rice,canada) =E= 0 ;
+     
+      (LHS = -3.32498473198939E-11, INFES = 3.32498473198939E-11 ****)
+     
+eq_c(rice,australia)..  - (1)*pe(labor,australia) - (1)*pe(capital,australia)
+     
+      + c(rice,australia) =E= 0 ; (LHS = 0)
+     
+eq_c(wheat,usa)..  - (1.45730493963037)*pe(labor,usa)
+     
+      - (0.728652469815185)*pe(capital,usa) + c(wheat,usa) =E= 0 ; (LHS = 0)
+     
+REMAINING 5 ENTRIES SKIPPED
+
+
+---- eq_dum  =G=  
+
+eq_dum..  dum =G= 0 ; (LHS = 0)
+     
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 11
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE m Using NLP From line 172
+
+
+---- p  
+
+p(rice)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+       (0.0489) eq_demand(rice,usa)
+       (0.0644) eq_demand(rice,canada)
+       (0.02)   eq_demand(rice,australia)
+       (0.02)   eq_demand(wheat,usa)
+       (0.015)  eq_demand(wheat,canada)
+       (0.005)  eq_demand(wheat,australia)
+       (0.012)  eq_demand(corn,usa)
+       (0.003)  eq_demand(corn,canada)
+       (0.001)  eq_demand(corn,australia)
+      (-1.5026) eq_zero_profits(rice,usa)
+      (-0.3722) eq_zero_profits(rice,canada)
+      (-0.0187) eq_zero_profits(rice,australia)
+
+p(wheat)
+                (.LO, .L, .UP, .M = 10, 10, 10, EPS)
+       (0.004)  eq_demand(rice,usa)
+       (0.008)  eq_demand(rice,canada)
+       (0.008)  eq_demand(rice,australia)
+       (0.1122) eq_demand(wheat,usa)
+       (0.0756) eq_demand(wheat,canada)
+       (0.03)   eq_demand(wheat,australia)
+       (0.006)  eq_demand(corn,usa)
+       (0.002)  eq_demand(corn,canada)
+       (0.002)  eq_demand(corn,australia)
+      (-0.0137) eq_zero_profits(wheat,usa)
+      (-1.5016) eq_zero_profits(wheat,canada)
+      (-0.9626) eq_zero_profits(wheat,australia)
+
+p(corn)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+       (0.002)  eq_demand(rice,usa)
+       (0.004)  eq_demand(rice,canada)
+       (0.012)  eq_demand(rice,australia)
+       (0.005)  eq_demand(wheat,usa)
+       (0.005)  eq_demand(wheat,canada)
+       (0.015)  eq_demand(wheat,australia)
+       (0.0643) eq_demand(corn,usa)
+       (0.0141) eq_demand(corn,canada)
+       (0.007)  eq_demand(corn,australia)
+      (-1.2285) eq_zero_profits(corn,usa)
+      (-0.0374) eq_zero_profits(corn,canada)
+      (-0.0187) eq_zero_profits(corn,australia)
+
+
+---- qp  
+
+qp(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 0.808958545493513, +INF, 0)
+        1       eq_demand(rice,usa)
+        1       eq_market_clear(rice)
+
+qp(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 0.824467103307433, +INF, 0)
+        1       eq_demand(rice,canada)
+        1       eq_market_clear(rice)
+
+qp(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 0.26, +INF, 0)
+        1       eq_demand(rice,australia)
+        1       eq_market_clear(rice)
+
+REMAINING 6 ENTRIES SKIPPED
+
+---- qs  
+
+qs(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 1.50256502476555, +INF, 0)
+       -1       eq_market_clear(rice)
+      (-1.4573) eq_factor_demand(rice,usa,labor)
+      (-0.7287) eq_factor_demand(rice,usa,capital)
+     (-10)      eq_zero_profits(rice,usa)
+
+qs(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 0.372184453607253, +INF, 0)
+       -1       eq_market_clear(rice)
+      (-0.5232) eq_factor_demand(rice,canada,labor)
+      (-1.5697) eq_factor_demand(rice,canada,capital)
+     (-10)      eq_zero_profits(rice,canada)
+
+qs(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 0.0186761704281388, +INF, EPS)
+       -1       eq_market_clear(rice)
+      (-1)      eq_factor_demand(rice,australia,labor)
+      (-1)      eq_factor_demand(rice,australia,capital)
+     (-10)      eq_zero_profits(rice,australia)
+
+REMAINING 6 ENTRIES SKIPPED
+
+---- pe  
+
+pe(labor,usa)
+                (.LO, .L, .UP, .M = 0.01, 3.52811862605205, +INF, 0)
+       (1.8619) eq_factor_demand(rice,usa,labor)
+       (0.017)  eq_factor_demand(wheat,usa,labor)
+       (1.5223) eq_factor_demand(corn,usa,labor)
+       (4)      eq_income(usa)
+       (2.1897) eq_zero_profits(rice,usa)
+       (0.02)   eq_zero_profits(wheat,usa)
+       (1.7903) eq_zero_profits(corn,usa)
+      (-1.4573) eq_c(wheat,usa)
+      (-1.4573) eq_c(corn,usa)
+
+pe(labor,canada)
+                (.LO, .L, .UP, .M = 0.01, 6.20492125565274, +INF, 0)
+       (0.0942) eq_factor_demand(rice,canada,labor)
+       (0.3799) eq_factor_demand(wheat,canada,labor)
+       (0.0095) eq_factor_demand(corn,canada,labor)
+       (1)      eq_income(canada)
+       (0.1947) eq_zero_profits(rice,canada)
+       (0.7857) eq_zero_profits(wheat,canada)
+       (0.0196) eq_zero_profits(corn,canada)
+      (-0.5232) eq_c(rice,canada)
+      (-0.5232) eq_c(wheat,canada)
+      (-0.5232) eq_c(corn,canada)
+
+pe(labor,australia)
+                (.LO, .L, .UP, .M = 0.01, 7, +INF, 0)
+       (0.008)  eq_factor_demand(rice,australia,labor)
+       (0.4126) eq_factor_demand(wheat,australia,labor)
+       (0.008)  eq_factor_demand(corn,australia,labor)
+       (1)      eq_income(australia)
+       (0.0187) eq_zero_profits(rice,australia)
+       (0.9626) eq_zero_profits(wheat,australia)
+       (0.0187) eq_zero_profits(corn,australia)
+      (-1)      eq_c(rice,australia)
+      (-1)      eq_c(wheat,australia)
+      (-1)      eq_c(corn,australia)
+
+REMAINING 3 ENTRIES SKIPPED
+
+---- qe  
+
+qe(labor,rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 2.18969543270667, +INF, 0)
+        1       eq_factor_demand(rice,usa,labor)
+        1       eq_factor_clear(labor,usa)
+       (3.5281) eq_zero_profits(rice,usa)
+
+qe(labor,rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 0.194741906872619, +INF, 0)
+        1       eq_factor_demand(rice,canada,labor)
+        1       eq_factor_clear(labor,canada)
+       (6.2049) eq_zero_profits(rice,canada)
+
+qe(labor,rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 0.0186761704281388, +INF, 0)
+        1       eq_factor_demand(rice,australia,labor)
+        1       eq_factor_clear(labor,australia)
+       (7)      eq_zero_profits(rice,australia)
+
+REMAINING 15 ENTRIES SKIPPED
+
+---- y  
+
+y(usa)
+                (.LO, .L, .UP, .M = 0.01, 27.4479272746757, +INF, 0)
+      (-0.02)   eq_demand(rice,usa)
+      (-0.05)   eq_demand(wheat,usa)
+      (-0.03)   eq_demand(corn,usa)
+       -1       eq_income(usa)
+
+y(canada)
+                (.LO, .L, .UP, .M = 0.01, 19.1116775826858, +INF, 0)
+      (-0.04)   eq_demand(rice,canada)
+      (-0.05)   eq_demand(wheat,canada)
+      (-0.01)   eq_demand(corn,canada)
+       -1       eq_income(canada)
+
+y(australia)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+      (-0.04)   eq_demand(rice,australia)
+      (-0.05)   eq_demand(wheat,australia)
+      (-0.01)   eq_demand(corn,australia)
+       -1       eq_income(australia)
+
+
+---- qet  
+
+qet(labor,usa)
+                (.LO, .L, .UP, .M = 4, 4, 4, EPS)
+       (3.5281) eq_income(usa)
+       -1       eq_factor_clear(labor,usa)
+
+qet(labor,canada)
+                (.LO, .L, .UP, .M = 1, 1, 1, EPS)
+       (6.2049) eq_income(canada)
+       -1       eq_factor_clear(labor,canada)
+
+qet(labor,australia)
+                (.LO, .L, .UP, .M = 1, 1, 1, EPS)
+       (7)      eq_income(australia)
+       -1       eq_factor_clear(labor,australia)
+
+REMAINING 3 ENTRIES SKIPPED
+
+---- c  
+
+c(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+      (-0.6569) eq_factor_demand(rice,usa,labor)
+      (-0.3285) eq_factor_demand(rice,usa,capital)
+
+c(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 9.99999999997368, +INF, EPS)
+      (-0.0584) eq_factor_demand(rice,canada,labor)
+      (-0.1753) eq_factor_demand(rice,canada,capital)
+        1       eq_c(rice,canada)
+
+c(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+      (-0.0056) eq_factor_demand(rice,australia,labor)
+      (-0.0056) eq_factor_demand(rice,australia,capital)
+        1       eq_c(rice,australia)
+
+REMAINING 6 ENTRIES SKIPPED
+
+---- dum  
+
+dum
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       eq_dum
+
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 12
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE m Using NLP From line 172
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           8     SINGLE EQUATIONS           57
+BLOCKS OF VARIABLES           9     SINGLE VARIABLES           64
+NON ZERO ELEMENTS           253     NON LINEAR N-Z            172
+CODE LENGTH                 512     CONSTANT POOL              39
+
+
+GENERATION TIME      =        0.016 SECONDS      4 MB  33.2.0 r4f23b21 WEX-WEI
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 13
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE m Using NLP From line 172
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   m                   OBJECTIVE  dum
+     TYPE    NLP                 DIRECTION  MINIMIZE
+     SOLVER  CONOPT              FROM LINE  172
+
+**** SOLVER STATUS     1 Normal Completion         
+**** MODEL STATUS      2 Locally Optimal           
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.062 10000000000.000
+ ITERATION COUNT, LIMIT        24    2147483647
+ EVALUATION ERRORS              0             0
+CONOPT 3         33.2.0 r4f23b21 Released Dec 01, 2020 WEI x86 64bit/MS Window
+ 
+ 
+    C O N O P T 3   version 3.17L
+    Copyright (C)   ARKI Consulting and Development A/S
+                    Bagsvaerdvej 246 A
+                    DK-2880 Bagsvaerd, Denmark
+ 
+ 
+                   Pre-triangular equations:   0
+                   Post-triangular equations:  1
+                   Definitional equations:     3
+ 
+ 
+ ** Optimal solution. Reduced gradient less than tolerance.
+ 
+ 
+ CONOPT time Total                            0.071 seconds
+   of which: Function evaluations             0.006 =  8.5%
+             1st Derivative evaluations       0.003 =  4.2%
+ 
+
+---- EQU eq_demand  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa           0.400     0.400     0.400      EPS       
+rice .canada        0.300     0.300     0.300      EPS       
+rice .australia     0.100     0.100     0.100      EPS       
+wheat.usa           0.200     0.200     0.200      EPS       
+wheat.canada        0.200     0.200     0.200      EPS       
+wheat.australia     0.200     0.200     0.200      EPS       
+corn .usa           0.100     0.100     0.100      EPS       
+corn .canada        0.100     0.100     0.100      EPS       
+corn .australia     0.300     0.300     0.300      EPS       
+
+---- EQU eq_market_clear  
+
+         LOWER     LEVEL     UPPER    MARGINAL
+
+rice       .         .         .         EPS       
+wheat      .         .         .         EPS       
+corn       .         .         .         EPS       
+
+---- EQU eq_factor_demand  
+
+                           LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa      .labor        .         .         .         EPS       
+rice .usa      .capital      .         .         .         EPS       
+rice .canada   .labor        .         .         .         EPS       
+rice .canada   .capital      .         .         .         EPS       
+rice .australia.labor        .         .         .         .         
+rice .australia.capital      .         .         .         EPS       
+wheat.usa      .labor        .         .         .         .         
+wheat.usa      .capital      .         .         .         EPS       
+wheat.canada   .labor        .         .         .         EPS       
+wheat.canada   .capital      .         .         .         EPS       
+wheat.australia.labor        .         .         .         EPS       
+wheat.australia.capital      .         .         .         EPS       
+corn .usa      .labor        .         .         .         EPS       
+corn .usa      .capital      .         .         .         EPS       
+corn .canada   .labor        .         .         .         .         
+corn .canada   .capital      .         .         .         EPS       
+corn .australia.labor        .         .         .         EPS       
+corn .australia.capital      .         .         .         EPS       
+
+---- EQU eq_income  
+
+             LOWER     LEVEL     UPPER    MARGINAL
+
+usa            .         .         .         EPS       
+canada         .         .         .         EPS       
+australia      .         .         .         EPS       
+
+---- EQU eq_factor_clear  
+
+                     LOWER     LEVEL     UPPER    MARGINAL
+
+labor  .usa            .         .         .         EPS       
+labor  .canada         .         .         .         EPS       
+labor  .australia      .         .         .         EPS       
+capital.usa            .         .         .         EPS       
+capital.canada         .         .         .         EPS       
+capital.australia      .         .         .         .         
+
+---- EQU eq_zero_profits  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa            .         .         .         EPS       
+rice .canada         .         .         .         EPS       
+rice .australia      .         .         .         EPS       
+wheat.usa            .         .         .         EPS       
+wheat.canada         .         .         .         EPS       
+wheat.australia      .         .         .         EPS       
+corn .usa            .         .         .         EPS       
+corn .canada         .         .         .         EPS       
+corn .australia      .         .         .         EPS       
+
+---- EQU eq_c  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .canada         .         .         .         EPS       
+rice .australia      .         .         .         EPS       
+wheat.usa            .         .         .         EPS       
+wheat.canada         .         .         .         EPS       
+wheat.australia      .         .         .         EPS       
+corn .usa            .         .         .         EPS       
+corn .canada         .         .         .         EPS       
+corn .australia      .         .         .         EPS       
+
+                       LOWER     LEVEL     UPPER    MARGINAL
+
+---- EQU eq_dum          .         .        +INF      1.000      
+
+---- VAR p  
+
+         LOWER     LEVEL     UPPER    MARGINAL
+
+rice      0.010    10.000     +INF       .         
+wheat    10.000    10.000    10.000      EPS       
+corn      0.010    10.000     +INF       .         
+
+---- VAR qp  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa           0.010     0.809     +INF       .         
+rice .canada        0.010     0.824     +INF       .         
+rice .australia     0.010     0.370     +INF       .         
+wheat.usa           0.010     1.222     +INF       .         
+wheat.canada        0.010     0.856     +INF       .         
+wheat.australia     0.010     0.538     +INF       .         
+corn .usa           0.010     0.713     +INF       .         
+corn .canada        0.010     0.231     +INF       .         
+corn .australia     0.010     0.368     +INF       .         
+
+---- VAR qs  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa           0.010     0.993     +INF       .         
+rice .canada        0.010     0.371     +INF       .         
+rice .australia     0.010     0.639     +INF       .         
+wheat.usa           0.010     0.497     +INF       .         
+wheat.canada        0.010     1.502     +INF       .         
+wheat.australia     0.010     0.616     +INF       .         
+corn .usa           0.010     1.255     +INF       .         
+corn .canada        0.010     0.037     +INF       .         
+corn .australia     0.010     0.020     +INF       EPS       
+
+---- VAR pe  
+
+                     LOWER     LEVEL     UPPER    MARGINAL
+
+labor  .usa           0.010     3.528     +INF       .         
+labor  .canada        0.010     6.205     +INF       .         
+labor  .australia     0.010     7.592     +INF       .         
+capital.usa           0.010     6.668     +INF       .         
+capital.canada        0.010     4.302     +INF       .         
+capital.australia     0.010     2.582     +INF       .         
+
+---- VAR qe  
+
+                           LOWER     LEVEL     UPPER    MARGINAL
+
+labor  .rice .usa           0.010     1.447     +INF       .         
+labor  .rice .canada        0.010     0.194     +INF       .         
+labor  .rice .australia     0.010     0.501     +INF       .         
+labor  .wheat.usa           0.010     0.724     +INF       .         
+labor  .wheat.canada        0.010     0.786     +INF       .         
+labor  .wheat.australia     0.010     0.483     +INF       .         
+labor  .corn .usa           0.010     1.828     +INF       .         
+labor  .corn .canada        0.010     0.019     +INF       EPS       
+labor  .corn .australia     0.010     0.016     +INF       .         
+capital.rice .usa           0.010     0.724     +INF       .         
+capital.rice .canada        0.010     0.583     +INF       EPS       
+capital.rice .australia     0.010     1.002     +INF       .         
+capital.wheat.usa           0.010     0.362     +INF       .         
+capital.wheat.canada        0.010     2.358     +INF       .         
+capital.wheat.australia     0.010     0.966     +INF       EPS       
+capital.corn .usa           0.010     0.914     +INF       .         
+capital.corn .canada        0.010     0.058     +INF       .         
+capital.corn .australia     0.010     0.032     +INF       .         
+
+---- VAR y  
+
+             LOWER     LEVEL     UPPER    MARGINAL
+
+usa           0.010    27.448     +INF       .         
+canada        0.010    19.112     +INF       .         
+australia     0.010    12.757     +INF       .         
+
+---- VAR qet  
+
+                     LOWER     LEVEL     UPPER    MARGINAL
+
+labor  .usa           4.000     4.000     4.000      EPS       
+labor  .canada        1.000     1.000     1.000      EPS       
+labor  .australia     1.000     1.000     1.000      EPS       
+capital.usa           2.000     2.000     2.000      EPS       
+capital.canada        3.000     3.000     3.000      EPS       
+capital.australia     2.000     2.000     2.000      EPS       
+
+---- VAR c  
+
+                   LOWER     LEVEL     UPPER    MARGINAL
+
+rice .usa           0.010    10.000     +INF       .         
+rice .canada        0.010    10.000     +INF       .         
+rice .australia     0.010    10.000     +INF       .         
+wheat.usa           0.010    10.000     +INF       .         
+wheat.canada        0.010    10.000     +INF       .         
+wheat.australia     0.010    10.000     +INF       .         
+corn .usa           0.010    10.000     +INF       .         
+corn .canada        0.010    10.000     +INF       .         
+corn .australia     0.010    10.000     +INF       .         
+
+                       LOWER     LEVEL     UPPER    MARGINAL
+
+---- VAR dum            -INF       .        +INF       .         
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+                             0     ERRORS
+                             4  PROJECTED
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 14
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE m2 Using CNS From line 173
+
+
+---- eq_c  =E=  
+
+eq_c(rice,canada)..  - (0.523240304610025)*pe(labor,canada)
+     
+      - (1.56972091383793)*pe(capital,canada) + c(rice,canada) =E= 0 ; (LHS = 0)
+     
+eq_c(rice,australia)..  - (0.783911409951623)*pe(labor,australia)
+     
+      - (1.56782281931669)*pe(capital,australia) + c(rice,australia) =E= 0 ;
+     
+      (LHS = -1.96491711790259E-10, INFES = 1.96491711790259E-10 ****)
+     
+eq_c(wheat,usa)..  - (1.45730493963738)*pe(labor,usa)
+     
+      - (0.728652469811476)*pe(capital,usa) + c(wheat,usa) =E= 0 ; (LHS = 0)
+     
+REMAINING 5 ENTRIES SKIPPED
+
+
+---- eq_demand  =E=  
+
+eq_demand(rice,usa)..  (0.0488958545537688)*p(rice) + (0.004)*p(wheat)
+     
+      + (0.002)*p(corn) + qp(rice,usa) - (0.02)*y(usa) =E= 0.4 ; (LHS = 0.4)
+     
+eq_demand(rice,canada)..  (0.0644467103303563)*p(rice) + (0.008)*p(wheat)
+     
+      + (0.004)*p(corn) + qp(rice,canada) - (0.04)*y(canada) =E= 0.3 ;
+     
+      (LHS = 0.3)
+     
+eq_demand(rice,australia)..  (0.0310261740049401)*p(rice) + (0.008)*p(wheat)
+     
+      + (0.012)*p(corn) + qp(rice,australia) - (0.04)*y(australia) =E= 0.1 ;
+     
+      (LHS = 0.1)
+     
+REMAINING 6 ENTRIES SKIPPED
+
+
+---- eq_market_clear  =E=  
+
+eq_market_clear(rice)..  qp(rice,usa) + qp(rice,canada) + qp(rice,australia)
+     
+      - qs(rice,usa) - qs(rice,canada) - qs(rice,australia) =E= 0 ; (LHS = 0)
+     
+eq_market_clear(wheat)..  qp(wheat,usa) + qp(wheat,canada) + qp(wheat,australia)
+     
+      - qs(wheat,usa) - qs(wheat,canada) - qs(wheat,australia) =E= 0 ; (LHS = 0)
+     
+eq_market_clear(corn)..  qp(corn,usa) + qp(corn,canada) + qp(corn,australia)
+     
+      - qs(corn,usa) - qs(corn,canada) - qs(corn,australia) =E= 0 ; (LHS = 0)
+     
+
+---- eq_factor_demand  =E=  
+
+eq_factor_demand(rice,usa,labor)..  - (1.45730493951567)*qs(rice,usa)
+     
+      + (1.23061529841675)*pe(labor,usa) + qe(labor,rice,usa)
+     
+      - (0.434175675596263)*c(rice,usa) =E= 0 ;
+     
+      (LHS = -6.37923047719369E-11, INFES = 6.37923047719369E-11 ****)
+     
+eq_factor_demand(rice,usa,capital)..  - (0.728652469750622)*qs(rice,usa)
+     
+      + (0.325580003208186)*pe(capital,usa) + qe(capital,rice,usa)
+     
+      - (0.217087837795982)*c(rice,usa) =E= 0 ;
+     
+      (LHS = -7.53908047101959E-12, INFES = 7.53908047101959E-12 ****)
+     
+eq_factor_demand(rice,canada,labor)..  - (0.523240304610025)*qs(rice,canada)
+     
+      + (0.0939795727176838)*pe(labor,canada) + qe(labor,rice,canada)
+     
+      - (0.0583135848348457)*c(rice,canada) =E= 0 ; (LHS = 0)
+     
+REMAINING 15 ENTRIES SKIPPED
+
+
+---- eq_income  =E=  
+
+eq_income(usa)..  (4)*pe(labor,usa) + (2)*pe(capital,usa) - y(usa)
+     
+      + (3.52811862634104)*qet(labor,usa) + (6.66772638580189)*qet(capital,usa)
+      =E= 0 ; (LHS = 0)
+     
+eq_income(canada)..  (1)*pe(labor,canada) + (3)*pe(capital,canada) - y(canada)
+     
+      + (6.20492125560314)*qet(labor,canada)
+     
+      + (4.30225210902315)*qet(capital,canada) =E= 0 ; (LHS = 0)
+     
+eq_income(australia)..  (1)*pe(labor,australia) + (2)*pe(capital,australia)
+     
+      - y(australia) + (7.59175839103443)*qet(labor,australia)
+     
+      + (2.58239255522557)*qet(capital,australia) =E= 0 ; (LHS = 0)
+     
+
+---- eq_factor_clear  =E=  
+
+eq_factor_clear(labor,usa)..  qe(labor,rice,usa) + qe(labor,wheat,usa)
+     
+      + qe(labor,corn,usa) - qet(labor,usa) =E= 0 ; (LHS = 0)
+     
+eq_factor_clear(labor,canada)..  qe(labor,rice,canada) + qe(labor,wheat,canada)
+     
+      + qe(labor,corn,canada) - qet(labor,canada) =E= 0 ; (LHS = 0)
+     
+eq_factor_clear(labor,australia)..  qe(labor,rice,australia)
+     
+      + qe(labor,wheat,australia) + qe(labor,corn,australia)
+     
+      - qet(labor,australia) =E= 0 ; (LHS = 0)
+     
+REMAINING 3 ENTRIES SKIPPED
+
+
+---- eq_zero_profits  =E=  
+
+eq_zero_profits(rice,usa)..  - (0.993101864150069)*p(rice) - (10)*qs(rice,usa)
+     
+      + (1.44725225200433)*pe(labor,usa) + (0.723626126019355)*pe(capital,usa)
+     
+      + (3.52811862634104)*qe(labor,rice,usa)
+     
+      + (6.66772638580189)*qe(capital,rice,usa) =E= 0 ;
+     
+      (LHS = -2.75356626389112E-10, INFES = 2.75356626389112E-10 ****)
+     
+eq_zero_profits(rice,canada)..  - (0.371490144019055)*p(rice)
+     
+      - (10)*qs(rice,canada) + (0.194378616116152)*pe(labor,canada)
+     
+      + (0.583135848351376)*pe(capital,canada)
+     
+      + (6.20492125560314)*qe(labor,rice,canada)
+     
+      + (4.30225210902315)*qe(capital,rice,canada) =E= 0 ; (LHS = 0)
+     
+eq_zero_profits(rice,australia)..  - (0.639095380721528)*p(rice)
+     
+      - (10)*qs(rice,australia) + (0.500994160704729)*pe(labor,australia)
+     
+      + (1.00198832226855)*pe(capital,australia)
+     
+      + (7.59175839103443)*qe(labor,rice,australia)
+     
+      + (2.58239255522557)*qe(capital,rice,australia) =E= 0 ;
+     
+      (LHS = 2.3351098832336E-11, INFES = 2.3351098832336E-11 ****)
+     
+REMAINING 6 ENTRIES SKIPPED
+
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 15
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE m2 Using CNS From line 173
+
+
+---- p  
+
+p(rice)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+       (0.0489) eq_demand(rice,usa)
+       (0.0644) eq_demand(rice,canada)
+       (0.031)  eq_demand(rice,australia)
+       (0.02)   eq_demand(wheat,usa)
+       (0.015)  eq_demand(wheat,canada)
+       (0.005)  eq_demand(wheat,australia)
+       (0.012)  eq_demand(corn,usa)
+       (0.003)  eq_demand(corn,canada)
+       (0.001)  eq_demand(corn,australia)
+      (-0.9931) eq_zero_profits(rice,usa)
+      (-0.3715) eq_zero_profits(rice,canada)
+      (-0.6391) eq_zero_profits(rice,australia)
+
+p(wheat)
+                (.LO, .L, .UP, .M = 10, 10, 10, EPS)
+       (0.004)  eq_demand(rice,usa)
+       (0.008)  eq_demand(rice,canada)
+       (0.008)  eq_demand(rice,australia)
+       (0.1122) eq_demand(wheat,usa)
+       (0.0756) eq_demand(wheat,canada)
+       (0.0438) eq_demand(wheat,australia)
+       (0.006)  eq_demand(corn,usa)
+       (0.002)  eq_demand(corn,canada)
+       (0.002)  eq_demand(corn,australia)
+      (-0.4971) eq_zero_profits(wheat,usa)
+      (-1.5025) eq_zero_profits(wheat,canada)
+      (-0.6162) eq_zero_profits(wheat,australia)
+
+p(corn)
+                (.LO, .L, .UP, .M = 0.01, 10.0000000008351, +INF, 0)
+       (0.002)  eq_demand(rice,usa)
+       (0.004)  eq_demand(rice,canada)
+       (0.012)  eq_demand(rice,australia)
+       (0.005)  eq_demand(wheat,usa)
+       (0.005)  eq_demand(wheat,canada)
+       (0.015)  eq_demand(wheat,australia)
+       (0.0643) eq_demand(corn,usa)
+       (0.0141) eq_demand(corn,canada)
+       (0.0098) eq_demand(corn,australia)
+      (-1.2546) eq_zero_profits(corn,usa)
+      (-0.0372) eq_zero_profits(corn,canada)
+      (-0.0204) eq_zero_profits(corn,australia)
+
+
+---- qp  
+
+qp(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 0.808958545537688, +INF, 0)
+        1       eq_demand(rice,usa)
+        1       eq_market_clear(rice)
+
+qp(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 0.824467103303563, +INF, 0)
+        1       eq_demand(rice,canada)
+        1       eq_market_clear(rice)
+
+qp(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 0.370261740049401, +INF, 0)
+        1       eq_demand(rice,australia)
+        1       eq_market_clear(rice)
+
+REMAINING 6 ENTRIES SKIPPED
+
+---- qs  
+
+qs(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 0.993101864150069, +INF, 0)
+       -1       eq_market_clear(rice)
+      (-1.4573) eq_factor_demand(rice,usa,labor)
+      (-0.7287) eq_factor_demand(rice,usa,capital)
+     (-10)      eq_zero_profits(rice,usa)
+
+qs(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 0.371490144019055, +INF, 0)
+       -1       eq_market_clear(rice)
+      (-0.5232) eq_factor_demand(rice,canada,labor)
+      (-1.5697) eq_factor_demand(rice,canada,capital)
+     (-10)      eq_zero_profits(rice,canada)
+
+qs(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 0.639095380721528, +INF, 0)
+       -1       eq_market_clear(rice)
+      (-0.7839) eq_factor_demand(rice,australia,labor)
+      (-1.5678) eq_factor_demand(rice,australia,capital)
+     (-10)      eq_zero_profits(rice,australia)
+
+REMAINING 6 ENTRIES SKIPPED
+
+---- pe  
+
+pe(labor,usa)
+                (.LO, .L, .UP, .M = 0.01, 3.52811862634104, +INF, 0)
+      (-1.4573) eq_c(wheat,usa)
+      (-1.4573) eq_c(corn,usa)
+       (1.2306) eq_factor_demand(rice,usa,labor)
+       (0.616)  eq_factor_demand(wheat,usa,labor)
+       (1.5546) eq_factor_demand(corn,usa,labor)
+       (4)      eq_income(usa)
+       (1.4473) eq_zero_profits(rice,usa)
+       (0.7245) eq_zero_profits(wheat,usa)
+       (1.8283) eq_zero_profits(corn,usa)
+
+pe(labor,canada)
+                (.LO, .L, .UP, .M = 0.01, 6.20492125560314, +INF, 0)
+      (-0.5232) eq_c(rice,canada)
+      (-0.5232) eq_c(wheat,canada)
+      (-0.5232) eq_c(corn,canada)
+       (0.094)  eq_factor_demand(rice,canada,labor)
+       (0.3801) eq_factor_demand(wheat,canada,labor)
+       (0.0094) eq_factor_demand(corn,canada,labor)
+       (1)      eq_income(canada)
+       (0.1944) eq_zero_profits(rice,canada)
+       (0.7862) eq_zero_profits(wheat,canada)
+       (0.0195) eq_zero_profits(corn,canada)
+
+pe(labor,australia)
+                (.LO, .L, .UP, .M = 0.01, 7.59175839103443, +INF, 0)
+      (-0.7839) eq_c(rice,australia)
+      (-0.7839) eq_c(wheat,australia)
+      (-0.7839) eq_c(corn,australia)
+       (0.198)  eq_factor_demand(rice,australia,labor)
+       (0.1909) eq_factor_demand(wheat,australia,labor)
+       (0.0063) eq_factor_demand(corn,australia,labor)
+       (1)      eq_income(australia)
+       (0.501)  eq_zero_profits(rice,australia)
+       (0.483)  eq_zero_profits(wheat,australia)
+       (0.016)  eq_zero_profits(corn,australia)
+
+REMAINING 3 ENTRIES SKIPPED
+
+---- qe  
+
+qe(labor,rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 1.44725225200433, +INF, 0)
+        1       eq_factor_demand(rice,usa,labor)
+        1       eq_factor_clear(labor,usa)
+       (3.5281) eq_zero_profits(rice,usa)
+
+qe(labor,rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 0.194378616116152, +INF, 0)
+        1       eq_factor_demand(rice,canada,labor)
+        1       eq_factor_clear(labor,canada)
+       (6.2049) eq_zero_profits(rice,canada)
+
+qe(labor,rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 0.500994160704729, +INF, 0)
+        1       eq_factor_demand(rice,australia,labor)
+        1       eq_factor_clear(labor,australia)
+       (7.5918) eq_zero_profits(rice,australia)
+
+REMAINING 15 ENTRIES SKIPPED
+
+---- y  
+
+y(usa)
+                (.LO, .L, .UP, .M = 0.01, 27.4479272769679, +INF, 0)
+      (-0.02)   eq_demand(rice,usa)
+      (-0.05)   eq_demand(wheat,usa)
+      (-0.03)   eq_demand(corn,usa)
+       -1       eq_income(usa)
+
+y(canada)
+                (.LO, .L, .UP, .M = 0.01, 19.1116775826726, +INF, 0)
+      (-0.04)   eq_demand(rice,canada)
+      (-0.05)   eq_demand(wheat,canada)
+      (-0.01)   eq_demand(corn,canada)
+       -1       eq_income(canada)
+
+y(australia)
+                (.LO, .L, .UP, .M = 0.01, 12.7565435014856, +INF, 0)
+      (-0.04)   eq_demand(rice,australia)
+      (-0.05)   eq_demand(wheat,australia)
+      (-0.01)   eq_demand(corn,australia)
+       -1       eq_income(australia)
+
+
+---- qet  
+
+qet(labor,usa)
+                (.LO, .L, .UP, .M = 4, 4, 4, EPS)
+       (3.5281) eq_income(usa)
+       -1       eq_factor_clear(labor,usa)
+
+qet(labor,canada)
+                (.LO, .L, .UP, .M = 1, 1, 1, EPS)
+       (6.2049) eq_income(canada)
+       -1       eq_factor_clear(labor,canada)
+
+qet(labor,australia)
+                (.LO, .L, .UP, .M = 1, 1, 1, EPS)
+       (7.5918) eq_income(australia)
+       -1       eq_factor_clear(labor,australia)
+
+REMAINING 3 ENTRIES SKIPPED
+
+---- c  
+
+c(rice,usa)
+                (.LO, .L, .UP, .M = 0.01, 10.0000000005567, +INF, 0)
+      (-0.4342) eq_factor_demand(rice,usa,labor)
+      (-0.2171) eq_factor_demand(rice,usa,capital)
+
+c(rice,canada)
+                (.LO, .L, .UP, .M = 0.01, 10, +INF, 0)
+        1       eq_c(rice,canada)
+      (-0.0583) eq_factor_demand(rice,canada,labor)
+      (-0.1749) eq_factor_demand(rice,canada,capital)
+
+c(rice,australia)
+                (.LO, .L, .UP, .M = 0.01, 10.0000000006475, +INF, 0)
+        1       eq_c(rice,australia)
+      (-0.1503) eq_factor_demand(rice,australia,labor)
+      (-0.3006) eq_factor_demand(rice,australia,capital)
+
+REMAINING 6 ENTRIES SKIPPED
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 16
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE m2 Using CNS From line 173
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS           56
+BLOCKS OF VARIABLES           8     SINGLE VARIABLES           63
+NON ZERO ELEMENTS           252     NON LINEAR N-Z            172
+CODE LENGTH                 513     CONSTANT POOL              39
+SINGLE =E|X= EQUS            56     SINGLE UNFIXED VARS        56
+
+
+GENERATION TIME      =        0.000 SECONDS      4 MB  33.2.0 r4f23b21 WEX-WEI
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 17
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE m2 Using CNS From line 173
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   m2                  
+     TYPE    CNS                 
+     SOLVER  PATH                FROM LINE  173
+
+**** SOLVER STATUS     1 Normal Completion         
+**** MODEL STATUS      16 Solved                   
+
+ RESOURCE USAGE, LIMIT          0.157 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+ EVALUATION ERRORS              0             0
+56 row/cols, 228 non-zeros, 7.27% dense.
+
+Path 5.0.02 (Tue Dec  1 17:26:19 2020)
+Written by Todd Munson, Steven Dirkse, Youngdae Kim, and Michael Ferris
+
+INITIAL POINT STATISTICS
+Maximum of X. . . . . . . . . .  2.7448e+01 var: (y(usa))
+Maximum of F. . . . . . . . . .  7.1252e-10 eqn: (eq_factor_demand(rice,austral)
+Maximum of Grad F . . . . . . .  1.0000e+01 eqn: (eq_zero_profits(corn,usa))
+                                            var: (qs(corn,usa))
+
+INITIAL JACOBIAN NORM STATISTICS
+Maximum Row Norm. . . . . . . .  2.4193e+01 eqn: (eq_zero_profits(corn,usa))
+Minimum Row Norm. . . . . . . .  1.0000e+00 eqn: (s(1))
+Maximum Column Norm . . . . . .  1.4316e+01 var: (pe(labor,usa))
+Minimum Column Norm . . . . . .  6.5126e-01 var: (c(rice,usa))
+
+FINAL STATISTICS
+Inf-Norm of Complementarity . .  7.1252e-10 eqn: (eq_factor_demand(rice,austral)
+Inf-Norm of Normal Map. . . . .  7.1252e-10 eqn: (eq_factor_demand(rice,austral)
+Inf-Norm of Minimum Map . . . .  7.1252e-10 eqn: (eq_factor_demand(rice,austral)
+Inf-Norm of Fischer Function. .  7.1252e-10 eqn: (eq_factor_demand(rice,austral)
+Inf-Norm of Grad Fischer Fcn. .  2.8520e-09 eqn: (s(12))
+Two-Norm of Grad Fischer Fcn. .  6.6855e-09
+
+FINAL POINT STATISTICS
+Maximum of X. . . . . . . . . .  2.7448e+01 var: (y(usa))
+Maximum of F. . . . . . . . . .  7.1252e-10 eqn: (eq_factor_demand(rice,austral)
+Maximum of Grad F . . . . . . .  1.0000e+01 eqn: (eq_zero_profits(corn,usa))
+                                            var: (qs(corn,usa))
+
+
+---- EQU eq_c  
+
+                   LOWER     LEVEL     UPPER
+
+rice .canada         .         .         .         
+rice .australia      .         .         .         
+wheat.usa            .         .         .         
+wheat.canada         .         .         .         
+wheat.australia      .         .         .         
+corn .usa            .         .         .         
+corn .canada         .         .         .         
+corn .australia      .         .         .         
+
+---- EQU eq_demand  
+
+                   LOWER     LEVEL     UPPER
+
+rice .usa           0.400     0.400     0.400      
+rice .canada        0.300     0.300     0.300      
+rice .australia     0.100     0.100     0.100      
+wheat.usa           0.200     0.200     0.200      
+wheat.canada        0.200     0.200     0.200      
+wheat.australia     0.200     0.200     0.200      
+corn .usa           0.100     0.100     0.100      
+corn .canada        0.100     0.100     0.100      
+corn .australia     0.300     0.300     0.300      
+
+---- EQU eq_market_clear  
+
+         LOWER     LEVEL     UPPER
+
+rice       .         .         .         
+wheat      .         .         .         
+corn       .         .         .         
+
+---- EQU eq_factor_demand  
+
+                           LOWER     LEVEL     UPPER
+
+rice .usa      .labor        .         .         .         
+rice .usa      .capital      .         .         .         
+rice .canada   .labor        .         .         .         
+rice .canada   .capital      .         .         .         
+rice .australia.labor        .         .         .         
+rice .australia.capital      .         .         .         
+wheat.usa      .labor        .         .         .         
+wheat.usa      .capital      .         .         .         
+wheat.canada   .labor        .         .         .         
+wheat.canada   .capital      .         .         .         
+wheat.australia.labor        .         .         .         
+wheat.australia.capital      .         .         .         
+corn .usa      .labor        .         .         .         
+corn .usa      .capital      .         .         .         
+corn .canada   .labor        .         .         .         
+corn .canada   .capital      .         .         .         
+corn .australia.labor        .         .         .         
+corn .australia.capital      .         .         .         
+
+---- EQU eq_income  
+
+             LOWER     LEVEL     UPPER
+
+usa            .         .         .         
+canada         .         .         .         
+australia      .         .         .         
+
+---- EQU eq_factor_clear  
+
+                     LOWER     LEVEL     UPPER
+
+labor  .usa            .         .         .         
+labor  .canada         .         .         .         
+labor  .australia      .         .         .         
+capital.usa            .         .         .         
+capital.canada         .         .         .         
+capital.australia      .         .         .         
+
+---- EQU eq_zero_profits  
+
+                   LOWER     LEVEL     UPPER
+
+rice .usa            .         .         .         
+rice .canada         .         .         .         
+rice .australia      .         .         .         
+wheat.usa            .         .         .         
+wheat.canada         .         .         .         
+wheat.australia      .         .         .         
+corn .usa            .         .         .         
+corn .canada         .         .         .         
+corn .australia      .         .         .         
+
+---- VAR p  
+
+         LOWER     LEVEL     UPPER
+
+rice      0.010    10.000     +INF       
+wheat    10.000    10.000    10.000      
+corn      0.010    10.000     +INF       
+
+---- VAR qp  
+
+                   LOWER     LEVEL     UPPER
+
+rice .usa           0.010     0.809     +INF       
+rice .canada        0.010     0.824     +INF       
+rice .australia     0.010     0.370     +INF       
+wheat.usa           0.010     1.222     +INF       
+wheat.canada        0.010     0.856     +INF       
+wheat.australia     0.010     0.538     +INF       
+corn .usa           0.010     0.713     +INF       
+corn .canada        0.010     0.231     +INF       
+corn .australia     0.010     0.368     +INF       
+
+---- VAR qs  
+
+                   LOWER     LEVEL     UPPER
+
+rice .usa           0.010     0.993     +INF       
+rice .canada        0.010     0.371     +INF       
+rice .australia     0.010     0.639     +INF       
+wheat.usa           0.010     0.497     +INF       
+wheat.canada        0.010     1.502     +INF       
+wheat.australia     0.010     0.616     +INF       
+corn .usa           0.010     1.255     +INF       
+corn .canada        0.010     0.037     +INF       
+corn .australia     0.010     0.020     +INF       
+
+---- VAR pe  
+
+                     LOWER     LEVEL     UPPER
+
+labor  .usa           0.010     3.528     +INF       
+labor  .canada        0.010     6.205     +INF       
+labor  .australia     0.010     7.592     +INF       
+capital.usa           0.010     6.668     +INF       
+capital.canada        0.010     4.302     +INF       
+capital.australia     0.010     2.582     +INF       
+
+---- VAR qe  
+
+                           LOWER     LEVEL     UPPER
+
+labor  .rice .usa           0.010     1.447     +INF       
+labor  .rice .canada        0.010     0.194     +INF       
+labor  .rice .australia     0.010     0.501     +INF       
+labor  .wheat.usa           0.010     0.724     +INF       
+labor  .wheat.canada        0.010     0.786     +INF       
+labor  .wheat.australia     0.010     0.483     +INF       
+labor  .corn .usa           0.010     1.828     +INF       
+labor  .corn .canada        0.010     0.019     +INF       
+labor  .corn .australia     0.010     0.016     +INF       
+capital.rice .usa           0.010     0.724     +INF       
+capital.rice .canada        0.010     0.583     +INF       
+capital.rice .australia     0.010     1.002     +INF       
+capital.wheat.usa           0.010     0.362     +INF       
+capital.wheat.canada        0.010     2.358     +INF       
+capital.wheat.australia     0.010     0.966     +INF       
+capital.corn .usa           0.010     0.914     +INF       
+capital.corn .canada        0.010     0.058     +INF       
+capital.corn .australia     0.010     0.032     +INF       
+
+---- VAR y  
+
+             LOWER     LEVEL     UPPER
+
+usa           0.010    27.448     +INF       
+canada        0.010    19.112     +INF       
+australia     0.010    12.757     +INF       
+
+---- VAR qet  
+
+                     LOWER     LEVEL     UPPER
+
+labor  .usa           4.000     4.000     4.000      
+labor  .canada        1.000     1.000     1.000      
+labor  .australia     1.000     1.000     1.000      
+capital.usa           2.000     2.000     2.000      
+capital.canada        3.000     3.000     3.000      
+capital.australia     2.000     2.000     2.000      
+
+---- VAR c  
+
+                   LOWER     LEVEL     UPPER
+
+rice .usa           0.010    10.000     +INF       
+rice .canada        0.010    10.000     +INF       
+rice .australia     0.010    10.000     +INF       
+wheat.usa           0.010    10.000     +INF       
+wheat.canada        0.010    10.000     +INF       
+wheat.australia     0.010    10.000     +INF       
+corn .usa           0.010    10.000     +INF       
+corn .canada        0.010    10.000     +INF       
+corn .australia     0.010    10.000     +INF       
+
+
+**** REPORT SUMMARY :        0 INFEASIBLE
+                             0  DEPENDENT
+                             0     ERRORS
+                            48  PROJECTED
+GAMS 33.2.0  r4f23b21 Released Dec  1, 2020 WEX-WEI x86 64bit/MS Windows - 06/08/24 16:37:26 Page 18
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    179 VARIABLE qe.L  
+
+                      usa      canada   australia
+
+labor  .rice        1.447       0.194       0.501
+labor  .wheat       0.724       0.786       0.483
+labor  .corn        1.828       0.019       0.016
+capital.rice        0.724       0.583       1.002
+capital.wheat       0.362       2.358       0.966
+capital.corn        0.914       0.058       0.032
+
+
+----    179 VARIABLE y.L  
+
+usa       27.448,    canada    19.112,    australia 12.757
+
+
+----    179 VARIABLE qp.L  
+
+              usa      canada   australia
+
+rice        0.809       0.824       0.370
+wheat       1.222       0.856       0.538
+corn        0.713       0.231       0.368
+
+
+----    179 VARIABLE c.L  
+
+              usa      canada   australia
+
+rice       10.000      10.000      10.000
+wheat      10.000      10.000      10.000
+corn       10.000      10.000      10.000
+
+
+----    179 PARAMETER c2  
+
+              usa      canada   australia
+
+rice       10.000      10.000      10.000
+wheat      10.000      10.000      10.000
+corn       10.000      10.000      10.000
+
+
+----    179 VARIABLE pe.L  
+
+                usa      canada   australia
+
+labor         3.528       6.205       7.592
+capital       6.668       4.302       2.582
+
+
+----    179 PARAMETER alpha2  
+
+                labor     capital
+
+usa             0.400       0.600
+canada          0.500       0.500
+australia       0.700       0.300
+
+
+----    179 PARAMETER gamma2               =        1.000  
+
+----    179 VARIABLE p.L  
+
+rice  10.000,    wheat 10.000,    corn  10.000
+
+
+----    179 VARIABLE qs.L  
+
+              usa      canada   australia
+
+rice        0.993       0.371       0.639
+wheat       0.497       1.502       0.616
+corn        1.255       0.037       0.020
+
+
+----    179 VARIABLE qet.L  
+
+                usa      canada   australia
+
+labor         4.000       1.000       1.000
+capital       2.000       3.000       2.000
+
+
+
+EXECUTION TIME       =        1.344 SECONDS      4 MB  33.2.0 r4f23b21 WEX-WEI
+
+
+USER: Large MUD - 20 User License                    G210128/0001CA-WIN
+      U.S. Department of Agriculture, Economic Research Service  DC1080
+
+
+**** FILE SUMMARY
+
+Input      C:\Users\MAROS.IVANIC\OneDrive - USDA\JuMP-may-24\Untitled_1.gms
+Output     C:\Users\MAROS.IVANIC\OneDrive - USDA\JuMP-may-24\Untitled_1.lst

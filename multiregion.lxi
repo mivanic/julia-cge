@@ -1,0 +1,157 @@
+B 3 C o m p i l a t i o n
+B 194 Equation Listing    SOLVE m Using NLP From line 156
+D 197 eq_demand
+D 218 eq_market_clear
+D 239 eq_factor_demand
+D 268 eq_income
+D 288 eq_factor_clear
+D 309 eq_zero_profits
+D 336 eq_c
+D 357 eq_dum
+B 363 Column Listing      SOLVE m Using NLP From line 156
+E 366 p
+E 414 qp
+E 433 qs
+E 458 pe
+E 500 qe
+E 522 y
+E 546 qet
+E 565 c
+E 586 dum
+B 594 Model Statistics    SOLVE m Using NLP From line 156
+B 608 Solution Report     SOLVE m Using NLP From line 156
+F 647 eq_demand
+F 661 eq_market_clear
+F 669 eq_factor_demand
+F 692 eq_income
+F 700 eq_factor_clear
+F 711 eq_zero_profits
+F 725 eq_c
+F 740 eq_dum
+G 742 p
+G 750 qp
+G 764 qs
+G 778 pe
+G 789 qe
+G 812 y
+G 820 qet
+G 831 c
+G 847 dum
+B 857 Equation Listing    SOLVE m2 Using CNS From line 170
+D 860 eq_c
+D 879 eq_demand
+D 898 eq_market_clear
+D 913 eq_factor_demand
+D 938 eq_income
+D 957 eq_factor_clear
+D 976 eq_zero_profits
+B 1012 Column Listing      SOLVE m2 Using CNS From line 170
+E 1015 p
+E 1063 qp
+E 1082 qs
+E 1107 pe
+E 1149 qe
+E 1171 y
+E 1195 qet
+E 1214 c
+B 1236 Model Statistics    SOLVE m2 Using CNS From line 170
+B 1251 Solution Report     SOLVE m2 Using CNS From line 170
+F 1298 eq_c
+F 1311 eq_demand
+F 1325 eq_market_clear
+F 1333 eq_factor_demand
+F 1356 eq_income
+F 1364 eq_factor_clear
+F 1375 eq_zero_profits
+G 1389 p
+G 1397 qp
+G 1411 qs
+G 1425 pe
+G 1436 qe
+G 1459 y
+G 1467 qet
+G 1478 c
+B 1499 Equation Listing    SOLVE m Using NLP From line 172
+D 1502 eq_demand
+D 1521 eq_market_clear
+D 1536 eq_factor_demand
+D 1561 eq_income
+D 1580 eq_factor_clear
+D 1599 eq_zero_profits
+D 1634 eq_c
+D 1653 eq_dum
+B 1659 Column Listing      SOLVE m Using NLP From line 172
+E 1662 p
+E 1710 qp
+E 1729 qs
+E 1754 pe
+E 1796 qe
+E 1818 y
+E 1842 qet
+E 1861 c
+E 1882 dum
+B 1890 Model Statistics    SOLVE m Using NLP From line 172
+B 1904 Solution Report     SOLVE m Using NLP From line 172
+F 1942 eq_demand
+F 1956 eq_market_clear
+F 1964 eq_factor_demand
+F 1987 eq_income
+F 1995 eq_factor_clear
+F 2006 eq_zero_profits
+F 2020 eq_c
+F 2035 eq_dum
+G 2037 p
+G 2045 qp
+G 2059 qs
+G 2073 pe
+G 2084 qe
+G 2107 y
+G 2115 qet
+G 2126 c
+G 2142 dum
+B 2152 Equation Listing    SOLVE m2 Using CNS From line 173
+D 2155 eq_c
+D 2174 eq_demand
+D 2195 eq_market_clear
+D 2210 eq_factor_demand
+D 2237 eq_income
+D 2257 eq_factor_clear
+D 2276 eq_zero_profits
+B 2314 Column Listing      SOLVE m2 Using CNS From line 173
+E 2317 p
+E 2365 qp
+E 2384 qs
+E 2409 pe
+E 2451 qe
+E 2473 y
+E 2497 qet
+E 2516 c
+B 2538 Model Statistics    SOLVE m2 Using CNS From line 173
+B 2553 Solution Report     SOLVE m2 Using CNS From line 173
+F 2600 eq_c
+F 2613 eq_demand
+F 2627 eq_market_clear
+F 2635 eq_factor_demand
+F 2658 eq_income
+F 2666 eq_factor_clear
+F 2677 eq_zero_profits
+G 2691 p
+G 2699 qp
+G 2713 qs
+G 2727 pe
+G 2738 qe
+G 2761 y
+G 2769 qet
+G 2780 c
+B 2801 E x e c u t i o n
+I 2801 qe
+I 2814 y
+I 2819 qp
+I 2828 c
+I 2837 c2
+I 2846 pe
+I 2854 alpha2
+I 2864 gamma2
+I 2865 p
+I 2870 qs
+I 2879 qet
